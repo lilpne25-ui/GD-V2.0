@@ -1,0 +1,54 @@
+-- ========================================
+-- Migración 005: Carga inicial de usuarios por puesto
+-- ========================================
+
+INSERT OR IGNORE INTO usuarios (id, nombre, email, rol, departamento, activo, created_at, updated_at) VALUES
+  ('org-001', 'FERNANDO GABRIEL MORENO JUAREZ', 'u001@empresa.com', '1 DIRECTOR', 'Dirección', 1, datetime('now'), datetime('now')),
+  ('org-002', 'RODRIGUEZ PINACHO BRENDA', 'u002@empresa.com', '1.1 RECURSOS HUMANOS', 'Recursos Humanos', 1, datetime('now'), datetime('now')),
+  ('org-003', 'MONDRAGON AYALA JOSE BERTIN', 'u003@empresa.com', '2 GERENTE DE VENTAS', 'Ventas', 1, datetime('now'), datetime('now')),
+  ('org-004', 'TRUJILLO CONTRERAS MARCO ANTONIO', 'u004@empresa.com', '2.1 INGENIERO DE VENTAS', 'Ventas', 1, datetime('now'), datetime('now')),
+  ('org-005', 'VALDES VALDES AGUSTIN', 'u005@empresa.com', '2.2 SOPORTE TÉCNICO', 'Ventas', 1, datetime('now'), datetime('now')),
+  ('org-006', 'JIMENEZ INES JOSE JUAN', 'u006@empresa.com', '3 COORDINADOR DE INGENIERIA DE PRODUCTO', 'Ingeniería de Producto', 1, datetime('now'), datetime('now')),
+  ('org-007', 'ALMAZAN TORRES EDGAR', 'u007@empresa.com', '3.1 INGENIERO DE PRODUCTO', 'Ingeniería de Producto', 1, datetime('now'), datetime('now')),
+  ('org-008', 'GOMEZ MEDINA JOSE MANUEL', 'u008@empresa.com', '3.1 INGENIERO DE PRODUCTO', 'Ingeniería de Producto', 1, datetime('now'), datetime('now')),
+  ('org-009', 'DE JESUS ESTRADA ALEJANDRO', 'u009@empresa.com', '3.1 INGENIERO DE PRODUCTO', 'Ingeniería de Producto', 1, datetime('now'), datetime('now')),
+  ('org-010', 'AGAPITO DE LA CRUZ LUIS ANTONIO', 'u010@empresa.com', '4 COORDINADOR DE INGENIERIA DE MANUFACTURA Y SISTEMAS', 'Ingeniería de Manufactura', 1, datetime('now'), datetime('now')),
+  ('org-011', 'RAMOS MUNGUIA JESUS', 'u011@empresa.com', '4.1 INGENIERO DE MANUFACTURA', 'Ingeniería de Manufactura', 1, datetime('now'), datetime('now')),
+  ('org-012', 'HERNANDEZ VALLE CIRO JESUS', 'u012@empresa.com', '4.1 INGENIERO DE MANUFACTURA', 'Ingeniería de Manufactura', 1, datetime('now'), datetime('now')),
+  ('org-013', 'TORRES HERNANDEZ CARLOS', 'u013@empresa.com', '4.1 INGENIERO DE MANUFACTURA', 'Ingeniería de Manufactura', 1, datetime('now'), datetime('now')),
+  ('org-014', 'ESQUIVEL CRUZ ROBERTO', 'u014@empresa.com', '4.2 INGENIERO INDUSTRIAL', 'Ingeniería de Manufactura', 1, datetime('now'), datetime('now')),
+  ('org-015', 'GARCÍA SANTIAGO DANIELA', 'u015@empresa.com', '4.2.2 INGENIERO DE HERRAMIENTAS', 'Ingeniería de Manufactura', 1, datetime('now'), datetime('now')),
+  ('org-016', 'VALDES REYES LUDWING MAXIMILIANO', 'u016@empresa.com', '4.3 TÉCNICO TI', 'TI', 1, datetime('now'), datetime('now')),
+  ('org-017', 'ALEJO LUGARDO ROBERTO CARLOS', 'u017@empresa.com', '5 COORDINADOR DE MECANIZADO', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-018', 'AGUILAR SANCHEZ MARTHA', 'u018@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-019', 'GARCIA GONZALEZ JORGE', 'u019@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-020', 'GODINEZ ROMERO ERIK ALAN', 'u020@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-021', 'ASIAIN HERNANDEZ EDWIN ALEJANDRO', 'u021@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-022', 'CASTILLO ACOSTA JOSE SERAFIN', 'u022@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-023', 'ESTRADA MARIN JAVIER', 'u023@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-024', 'SANCHEZ RAMIREZ EDUARDO ALEJANDRO', 'u024@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-025', 'GOMEZ FLORES ODIN RAYMUNDO', 'u025@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-026', 'DOTOR INIESTRA MACARIO', 'u026@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-027', 'ROMAN ALMAZAN CARLOS', 'u027@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-028', 'CORONA DOLORES OSCAR DAVID', 'u028@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-029', 'ORTEGA GOMEZ DIONISO DITIRAM', 'u029@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-030', 'CAMPOS SILVA JESUS EVODIO', 'u030@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-031', 'LOPEZ SANCHEZ MARITZA', 'u031@empresa.com', '5.1 OPERADOR', 'Mecanizado', 1, datetime('now'), datetime('now')),
+  ('org-032', 'FLORES ESCOBAR PEDRO', 'u032@empresa.com', '6 COORDINADOR DE ENSAMBLE', 'Ensamble', 1, datetime('now'), datetime('now')),
+  ('org-033', 'BETANZOS DE ANDA HANNIA', 'u033@empresa.com', '6.1 ENSAMBLADOR', 'Ensamble', 1, datetime('now'), datetime('now')),
+  ('org-034', 'DURAN GARCIA JAZMIN', 'u034@empresa.com', '6.2 AUXILIAR ENSAMBLADOR', 'Ensamble', 1, datetime('now'), datetime('now')),
+  ('org-035', 'CARDENAS ROMERO RICARDO ALONSO', 'u035@empresa.com', '7 COORDINADOR DE LOGISTICA', 'Logística', 1, datetime('now'), datetime('now')),
+  ('org-036', 'GOMEZ GUILLERMO GUSTAVO', 'u036@empresa.com', '7.1 AUXILIAR DE LOGISTICA', 'Logística', 1, datetime('now'), datetime('now')),
+  ('org-037', 'VILLADA ESCOBAR SELENA', 'u037@empresa.com', '8 COORDINADOR DEL SGC', 'Calidad', 1, datetime('now'), datetime('now')),
+  ('org-038', 'ZEPEDA SILVESTRE CARLOS', 'u038@empresa.com', '8.1 METRÓLOGO', 'Calidad', 1, datetime('now'), datetime('now')),
+  ('org-039', 'CAMPOS SILVA LUIS ENRIQUE', 'u039@empresa.com', '8.2 AUDITOR DE CALIDAD', 'Calidad', 1, datetime('now'), datetime('now')),
+  ('org-040', 'CARDENAS MARTINEZ RICARDO', 'u040@empresa.com', '8.3 TÉCNICO DE CALIBRACIÓN', 'Calidad', 1, datetime('now'), datetime('now')),
+  ('org-041', 'GIL SALINAS CHRISTOPHER', 'u041@empresa.com', '9 COORDINADOR DE MECATRONICA Y MANTENIMIENTO', 'Mecatrónica y Mantenimiento', 1, datetime('now'), datetime('now')),
+  ('org-042', 'CALDERON VILCHIS EDUARDO', 'u042@empresa.com', '9.1 INGENIERO MECATRONICO', 'Mecatrónica y Mantenimiento', 1, datetime('now'), datetime('now')),
+  ('org-043', 'XINGU GUTIERREZ SALVADOR', 'u043@empresa.com', '9.2 TÉCNICO DE MANTENIMIENTO', 'Mecatrónica y Mantenimiento', 1, datetime('now'), datetime('now')),
+  ('org-044', 'REYES LOPEZ DIEGO', 'u044@empresa.com', '9.2 TÉCNICO DE MANTENIMIENTO', 'Mecatrónica y Mantenimiento', 1, datetime('now'), datetime('now'));
+
+INSERT OR IGNORE INTO usuario_credenciales (user_id, password, updated_at)
+SELECT id, '123456', datetime('now')
+FROM usuarios
+WHERE id LIKE 'org-%';

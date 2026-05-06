@@ -1,0 +1,61 @@
+.document-tree-container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #0001;
+  padding: 24px 32px;
+  margin: 32px;
+  min-width: 400px;
+  max-width: 600px;
+}
+.document-tree-container h2 {
+  color: #0D47A1;
+  font-family: 'Montserrat', Arial, sans-serif;
+  margin-bottom: 16px;
+}
+.document-tree {
+  list-style: none;
+  padding-left: 0;
+  font-family: 'Inter', Arial, sans-serif;
+}
+.document-tree li {
+  margin: 6px 0 6px 16px;
+  position: relative;
+  padding-left: 8px;
+}
+.document-tree li.selected > span {
+  background: #e3f2fd;
+  border-radius: 4px;
+  color: #0D47A1;
+}
+.document-tree span {
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.document-tree .tree-actions {
+  display: inline-block;
+  margin-left: 8px;
+}
+.document-tree .tree-actions button {
+  background: none;
+  border: none;
+  color: #757575;
+  cursor: pointer;
+  font-size: 0.9em;
+  margin-right: 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.2s, color 0.2s;
+}
+.document-tree .tree-actions button:hover {
+  background: #e3f2fd;
+  color: #0D47A1;
+}
+.document-tree input[type="text"] {
+  font-size: 1em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #bdbdbd;
+  margin-right: 4px;
+}

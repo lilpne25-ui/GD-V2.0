@@ -1,0 +1,10 @@
+{
+  "connector": {
+    "name": "local"
+  },
+  "hints": {
+    "css-inline-styles": "off",
+    "compat-api/css": "off",
+    "css-prefix-order": "off"
+  }
+}
