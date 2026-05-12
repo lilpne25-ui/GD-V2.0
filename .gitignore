@@ -1,6 +1,9 @@
 node_modules/
 dist/
-backups/
+backups/*
+!backups/20260303-101847/
+!backups/20260303-101847/SGC_Dev_precutover.bak
+!backups/20260303-101847/sgc_precutover.db
 .env
 .tmp_*
 *.log
