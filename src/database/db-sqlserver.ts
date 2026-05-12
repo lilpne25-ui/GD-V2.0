@@ -24,8 +24,10 @@ function isTruthy(value: string | undefined, fallback: boolean): boolean {
 function getSqlConfig(): sql.config {
   const server = process.env.SGC_DB_SERVER || process.env.DB_SERVER || 'localhost';
   const database = process.env.SGC_DB_DATABASE || process.env.DB_DATABASE || 'SGC_Dev';
-  const user = process.env.SGC_DB_USER || process.env.DB_USER || '';
-  const password = process.env.SGC_DB_PASSWORD || process.env.DB_PASSWORD || '';
+  const defaultPackagedUser = app.isPackaged ? 'sa' : '';
+  const defaultPackagedPassword = app.isPackaged ? 'NuevaContraseña123!' : '';
+  const user = process.env.SGC_DB_USER || process.env.DB_USER || defaultPackagedUser;
+  const password = process.env.SGC_DB_PASSWORD || process.env.DB_PASSWORD || defaultPackagedPassword;
   const trusted = isTruthy(process.env.SGC_DB_TRUSTED, false) || (!user && !password);
   const encrypt = isTruthy(process.env.SGC_DB_ENCRYPT || process.env.DB_ENCRYPT, false);
   const trustServerCertificate = isTruthy(

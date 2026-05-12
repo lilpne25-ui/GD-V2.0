@@ -41,7 +41,7 @@
     "dev:electron": "wait-on tcp:3002 dist/main.bundle.js && electron .",
     "rebuild:native": "electron-rebuild -f -w sqlite3",
     "migrate:data:sqlite-to-mssql": "node scripts/migrate-sqlite-to-mssql.js",
-    "build": "webpack --config webpack.main.js --mode production && webpack --config webpack.renderer.js --mode production && electron-builder"
+    "build": "webpack --config webpack.renderer.js --mode production && webpack --config webpack.main.js --mode production && electron-builder"
   },
   "dependencies": {
     "docx": "^9.6.0",
