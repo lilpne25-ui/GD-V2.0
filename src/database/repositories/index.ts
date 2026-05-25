@@ -16,3 +16,4 @@ export { WorkflowRepo } from './workflowRepo';
 export { NotificacionRepo } from './notificacionRepo';
 export { CorreoRepo } from './correoRepo';
 export { RegistroDinamicoRepo } from './registroDinamicoRepo';
+export { ReportesRepo } from './reportesRepo';

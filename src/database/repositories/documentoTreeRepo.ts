@@ -81,6 +81,13 @@ interface DocumentoOfficePreview {
   html: string;
 }
 
+interface DocumentoDownloadPayload {
+  fileName: string;
+  mimeType: string;
+  base64: string;
+  sizeBytes: number;
+}
+
 export interface DocumentoAuditRow {
   id: string;
   event_type: 'add_document' | 'add_folder' | 'delete_node' | 'rename_node' | 'move_node';
@@ -931,6 +938,25 @@ export const DocumentoTreeRepo = {
        WHERE id = ?`,
       [id]
     );
+  },
+
+  async getFileDownloadPayload(nodeId: string, actorRole?: RolUsuario): Promise<DocumentoDownloadPayload> {
+    void actorRole;
+    const node = await DocumentoTreeRepo.getById(nodeId);
+    if (!node || node.node_type !== 'file') {
+      throw new Error('El documento seleccionado no existe o no es un archivo.');
+    }
+
+    const binary = await getNodeBinary(node);
+    const fileName = String(node.file_name || node.name || node.id || 'documento').trim() || 'documento';
+    const mimeType = String(node.mime_type || 'application/octet-stream').trim() || 'application/octet-stream';
+
+    return {
+      fileName,
+      mimeType,
+      base64: binary.toString('base64'),
+      sizeBytes: binary.length,
+    };
   },
 
   async listSignatures(nodeId: string, actorRole?: RolUsuario): Promise<DocumentoFirmaRow[]> {

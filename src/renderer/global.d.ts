@@ -11,6 +11,18 @@ import type {
   TransitionRecordInput,
   UpdateRecordInput,
 } from '../shared/types/registros-dinamicos';
+import type {
+  AnalyzeRagRecordInput,
+  GetRagAnswerInput,
+  GetRagEvidenceInput,
+  IngestRagDocumentNodeInput,
+  RagAnalyzeRecordResult,
+  RagAnswer,
+  RagEvidenceResult,
+  RagIngestDocumentNodeResult,
+  RagStatusResult,
+  SubmitRagFeedbackInput,
+} from '../shared/types/rag';
 
 declare global {
   interface Window {
@@ -34,6 +46,14 @@ declare global {
       getTransitions: (input: GetRecordTransitionsInput) => Promise<RecordTransitionOption[]>;
       getAuditHistory: (input: GetRecordAuditHistoryInput) => Promise<QueryRecordAuditHistoryResult>;
       transition: (input: TransitionRecordInput) => Promise<boolean>;
+    };
+    rag: {
+      getStatus: () => Promise<RagStatusResult>;
+      analyzeRecord: (input: AnalyzeRagRecordInput) => Promise<RagAnalyzeRecordResult>;
+      ingestDocumentNode: (input: IngestRagDocumentNodeInput) => Promise<RagIngestDocumentNodeResult>;
+      getAnswer: (input: GetRagAnswerInput) => Promise<RagAnswer | null>;
+      submitFeedback: (input: SubmitRagFeedbackInput) => Promise<string>;
+      getEvidence: (input: GetRagEvidenceInput) => Promise<RagEvidenceResult>;
     };
   }
 }

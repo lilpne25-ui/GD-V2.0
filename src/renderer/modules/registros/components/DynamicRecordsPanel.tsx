@@ -12,6 +12,11 @@ import type {
   TransitionRecordInput,
   UpdateRecordInput,
 } from '../../../../shared/types/registros-dinamicos';
+import type {
+  RagAnalyzeRecordResult,
+  RagEvidenceResult,
+  RagStatusResult,
+} from '../../../../shared/types/rag';
 import DynamicRecordForm from './DynamicRecordForm';
 
 type RecordEditMode = 'new' | 'edit';
@@ -20,6 +25,23 @@ type SessionUser = {
   id: string;
   nombre: string;
   rol: string;
+};
+
+type ExcelImportResult = {
+  recordTypeId: string;
+  recordTypeCode: string;
+  recordTypeName: string;
+  sheetName: string;
+  headerRowNumber: number;
+  fieldsCreated: number;
+  recordsSeeded: number;
+  skippedRows: number;
+  warnings: string[];
+};
+
+type RagDisplayItem = {
+  title: string;
+  detail: string;
 };
 
 function parseBooleanFlag(value: unknown): boolean | null {
@@ -109,6 +131,55 @@ function safeErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function toRagDisplayItems(value: unknown, titleKey: string, detailKey: string): RagDisplayItem[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.map(item => {
+    if (typeof item === 'string') {
+      return { title: item, detail: '' };
+    }
+
+    if (item && typeof item === 'object') {
+      const raw = item as Record<string, unknown>;
+      return {
+        title: String(raw[titleKey] || raw.field || raw.title || raw.action || 'Elemento'),
+        detail: String(raw[detailKey] || raw.reason || raw.issue || raw.detail || raw.evidence || ''),
+      };
+    }
+
+    return { title: String(item ?? ''), detail: '' };
+  }).filter(item => item.title.trim() || item.detail.trim());
+}
+
+function summarizeChunk(value: string, maxLength = 220): string {
+  const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength)}...`;
+}
+
+function isRagAllowedForType(status: RagStatusResult | null, definition: RecordDefinition | null): boolean {
+  if (!status?.ragEnabled || !definition) return false;
+  const code = definition.recordType.code.toUpperCase();
+  if (code.startsWith('FP-05')) return status.fp05Enabled;
+  if (code.startsWith('FP-08')) return status.fp08Enabled;
+  return true;
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const raw = String(reader.result || '');
+      const commaIndex = raw.indexOf(',');
+      resolve(commaIndex >= 0 ? raw.slice(commaIndex + 1) : raw);
+    };
+
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo Excel seleccionado.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 const RECORDS_PAGE_SIZE = 50;
 
 const DynamicRecordsPanel: React.FC = () => {
@@ -133,6 +204,16 @@ const DynamicRecordsPanel: React.FC = () => {
   const [submitting, setSubmitting] = React.useState(false);
   const [definitionError, setDefinitionError] = React.useState('');
   const [transitionOptions, setTransitionOptions] = React.useState<RecordTransitionOption[]>([]);
+  const [importingExcel, setImportingExcel] = React.useState(false);
+  const importInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [ragStatus, setRagStatus] = React.useState<RagStatusResult | null>(null);
+  const [ragAnalyzing, setRagAnalyzing] = React.useState(false);
+  const [ragFeedbackSubmitting, setRagFeedbackSubmitting] = React.useState(false);
+  const [ragResult, setRagResult] = React.useState<RagAnalyzeRecordResult | null>(null);
+  const [ragEvidence, setRagEvidence] = React.useState<RagEvidenceResult | null>(null);
+  const [ragError, setRagError] = React.useState('');
+  const [ragCorrectionMode, setRagCorrectionMode] = React.useState(false);
+  const [ragCorrectionText, setRagCorrectionText] = React.useState('');
 
   const actorForAutoDefaults = React.useMemo(() => resolveActor(), [formResetKey]);
   const formAutoContext = React.useMemo(() => {
@@ -152,6 +233,12 @@ const DynamicRecordsPanel: React.FC = () => {
 
   const hasMoreRecords = recordsPage > 0 && recordsPage < recordsTotalPages;
   const readOnlyRecord = Boolean(selectedRecord && selectedRecord.status !== 'borrador');
+  const ragVisible = isRagAllowedForType(ragStatus, definition);
+  const ragAnswerPayload = (ragResult?.answer?.answer || {}) as Record<string, unknown>;
+  const ragFindings = toRagDisplayItems(ragAnswerPayload.findings, 'title', 'detail');
+  const ragMissingFields = toRagDisplayItems(ragAnswerPayload.missingFields, 'field', 'reason');
+  const ragInconsistencies = toRagDisplayItems(ragAnswerPayload.inconsistencies, 'field', 'issue');
+  const ragActions = toRagDisplayItems(ragAnswerPayload.suggestedActions, 'action', 'detail');
 
   const loadTransitions = React.useCallback(async (record: RecordInstance | null) => {
     if (!record) {
@@ -197,6 +284,70 @@ const DynamicRecordsPanel: React.FC = () => {
     } finally {
       setLoadingTypes(false);
     }
+  }, []);
+
+  const handleImportFp05 = React.useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+
+    if (!files.length) return;
+
+    const fp05Files = files.filter(file => /^FP-05/i.test(file.name.trim()));
+    const skippedNonFp05 = files.length - fp05Files.length;
+    if (!fp05Files.length) {
+      toast.warning('Selecciona al menos un archivo FP-05 en formato .xlsx.');
+      return;
+    }
+
+    const actor = resolveActor();
+    setImportingExcel(true);
+
+    try {
+      const results: ExcelImportResult[] = [];
+
+      for (const file of fp05Files) {
+        const workbookBase64 = await fileToBase64(file);
+        const response = await window.repo.call('RegistroDinamicoRepo', 'importRecordTypeFromExcel', {
+          fileName: file.name,
+          workbookBase64,
+          actorUserId: actor.id,
+          actorUserName: actor.nombre,
+          actorRole: actor.rol || 'admin',
+          seedRows: true,
+          seedRowsLimit: 200,
+        }) as ExcelImportResult;
+
+        results.push(response);
+      }
+
+      await loadRecordTypes();
+
+      if (results.length > 0) {
+        const lastImported = results[results.length - 1];
+        const totalFields = results.reduce((acc, item) => acc + Number(item.fieldsCreated || 0), 0);
+        const totalRecords = results.reduce((acc, item) => acc + Number(item.recordsSeeded || 0), 0);
+
+        setSelectedTypeId(lastImported.recordTypeId);
+        toast.success(`Importacion FP-05 completada: ${results.length} plantilla(s), ${totalFields} campos, ${totalRecords} registro(s).`);
+
+        const warnings = results.flatMap(item => Array.isArray(item.warnings) ? item.warnings : []);
+        if (warnings.length > 0) {
+          toast.warning(warnings[0]);
+        }
+      }
+
+      if (skippedNonFp05 > 0) {
+        toast.warning(`Se omitieron ${skippedNonFp05} archivo(s) fuera del alcance FP-05.`);
+      }
+    } catch (error) {
+      toast.error(safeErrorMessage(error, 'No fue posible importar los archivos FP-05.'));
+    } finally {
+      setImportingExcel(false);
+    }
+  }, [loadRecordTypes]);
+
+  const triggerFp05Import = React.useCallback(() => {
+    importInputRef.current?.click();
   }, []);
 
   const refreshRecords = React.useCallback(
@@ -346,6 +497,29 @@ const DynamicRecordsPanel: React.FC = () => {
   }, [loadRecordTypes]);
 
   React.useEffect(() => {
+    let alive = true;
+
+    const loadRagStatus = async () => {
+      try {
+        if (!window.rag?.getStatus) {
+          if (alive) setRagStatus(null);
+          return;
+        }
+
+        const status = await window.rag.getStatus();
+        if (alive) setRagStatus(status);
+      } catch {
+        if (alive) setRagStatus(null);
+      }
+    };
+
+    void loadRagStatus();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
     if (!selectedTypeId) {
       setDefinition(null);
       setRecords([]);
@@ -375,6 +549,84 @@ const DynamicRecordsPanel: React.FC = () => {
     void loadTransitions(selectedRecord);
     setFormResetKey(prev => prev + 1);
   }, [loadTransitions, selectedRecord]);
+
+  React.useEffect(() => {
+    setRagResult(null);
+    setRagEvidence(null);
+    setRagError('');
+    setRagCorrectionMode(false);
+    setRagCorrectionText('');
+  }, [selectedRecordId, selectedTypeId]);
+
+  const handleAnalyzeWithRag = React.useCallback(async () => {
+    if (!definition || !selectedRecord || !ragVisible) return;
+
+    const actor = resolveActor();
+    setRagAnalyzing(true);
+    setRagError('');
+    setRagCorrectionMode(false);
+
+    try {
+      const result = await window.rag.analyzeRecord({
+        recordId: selectedRecord.id,
+        recordTypeId: definition.recordType.id,
+        recordTypeCode: definition.recordType.code,
+        actorUserId: actor.id,
+        actorRole: actor.rol,
+      });
+
+      setRagResult(result);
+
+      if (result.answerId) {
+        const evidence = await window.rag.getEvidence({ answerId: result.answerId });
+        setRagEvidence(evidence);
+      }
+
+      if (result.fallback) {
+        toast.warning('RAG respondio en modo fallback/solo-cache.');
+      } else {
+        toast.success(result.cacheHit ? 'Analisis RAG recuperado desde cache.' : 'Analisis RAG completado.');
+      }
+    } catch (error) {
+      const message = safeErrorMessage(error, 'No fue posible ejecutar el analisis RAG.');
+      setRagError(message);
+      toast.warning(message);
+    } finally {
+      setRagAnalyzing(false);
+      try {
+        const status = await window.rag.getStatus();
+        setRagStatus(status);
+      } catch {
+        // No bloquear UI por estado RAG.
+      }
+    }
+  }, [definition, ragVisible, selectedRecord]);
+
+  const submitRagFeedback = React.useCallback(async (accepted: boolean) => {
+    if (!ragResult?.answerId) return;
+
+    const actor = resolveActor();
+    setRagFeedbackSubmitting(true);
+
+    try {
+      await window.rag.submitFeedback({
+        answerId: ragResult.answerId,
+        rating: accepted ? 5 : 2,
+        accepted,
+        correctionText: accepted ? null : ragCorrectionText.trim(),
+        correction: {},
+        actorUserId: actor.id,
+      });
+
+      toast.success(accepted ? 'Feedback RAG registrado.' : 'Correccion enviada para revision.');
+      setRagCorrectionMode(false);
+      setRagCorrectionText('');
+    } catch (error) {
+      toast.warning(safeErrorMessage(error, 'No fue posible registrar feedback RAG.'));
+    } finally {
+      setRagFeedbackSubmitting(false);
+    }
+  }, [ragCorrectionText, ragResult?.answerId]);
 
   const handleCreateNew = () => {
     setSelectedRecordId(null);
@@ -513,10 +765,27 @@ const DynamicRecordsPanel: React.FC = () => {
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => refreshRecords(selectedTypeId)}>
             Refrescar
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={triggerFp05Import}
+            disabled={importingExcel}
+          >
+            {importingExcel ? 'Importando...' : 'Importar FP-05'}
+          </button>
           <button type="button" className="btn btn-primary btn-sm" onClick={handleCreateNew}>
             Nuevo
           </button>
         </div>
+
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          multiple
+          onChange={event => { void handleImportFp05(event); }}
+          style={{ display: 'none' }}
+        />
 
         <div className="dr-record-list" role="list" aria-label="Registros del tipo seleccionado">
           {loadingRecords ? (
@@ -604,6 +873,18 @@ const DynamicRecordsPanel: React.FC = () => {
                       {option.label}
                     </button>
                   ))}
+
+                {ragVisible && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => void handleAnalyzeWithRag()}
+                    disabled={!selectedRecord || ragAnalyzing}
+                    title={selectedRecord ? 'Analizar registro con evidencia RAG' : 'Selecciona un registro guardado para analizar'}
+                  >
+                    {ragAnalyzing ? 'Analizando...' : 'Analizar con RAG'}
+                  </button>
+                )}
               </div>
             </header>
 
@@ -615,6 +896,140 @@ const DynamicRecordsPanel: React.FC = () => {
               <div className="dr-readonly-note" role="status">
                 El registro seleccionado esta en estado <strong>{statusLabel(selectedRecord!.status)}</strong>. Solo se permite lectura.
               </div>
+            )}
+
+            {ragVisible && (
+              <section className="dr-rag-panel" aria-label="Analisis RAG del registro">
+                <div className="dr-rag-header">
+                  <div>
+                    <h4>Analisis RAG</h4>
+                    <p>Consulta evidencia de documentos FP y devuelve hallazgos sin bloquear el formulario.</p>
+                  </div>
+                  <div className="dr-rag-badges">
+                    <span className={`dr-rag-badge ${ragResult?.cacheHit ? 'dr-rag-badge--ok' : 'dr-rag-badge--neutral'}`}>
+                      {ragResult ? (ragResult.cacheHit ? 'Cache hit' : 'Cache miss') : 'Sin consulta'}
+                    </span>
+                    {ragStatus?.effectiveOnlyCacheMode && (
+                      <span className="dr-rag-badge dr-rag-badge--warn">Solo cache</span>
+                    )}
+                    {ragResult?.fallback && (
+                      <span className="dr-rag-badge dr-rag-badge--warn">Fallback</span>
+                    )}
+                    <span className="dr-rag-badge dr-rag-badge--neutral">
+                      Conocimiento: {ragStatus?.knowledgeVersion || 'sin-conocimiento'}
+                    </span>
+                  </div>
+                </div>
+
+                {!selectedRecord ? (
+                  <p className="dr-muted">Selecciona un registro existente para habilitar el analisis.</p>
+                ) : ragError ? (
+                  <div className="dr-rag-error" role="status">{ragError}</div>
+                ) : !ragResult ? (
+                  <p className="dr-muted">Ejecuta "Analizar con RAG" para ver hallazgos, evidencia y acciones sugeridas.</p>
+                ) : (
+                  <>
+                    <div className="dr-rag-summary">
+                      <strong>Resumen</strong>
+                      <p>{String(ragAnswerPayload.summary || 'Sin resumen disponible.')}</p>
+                      <small>
+                        Modelo: {ragResult.model} · Evidencias: {ragResult.retrievalCount} · Tokens contexto: {ragResult.contextTokenEstimate}
+                      </small>
+                    </div>
+
+                    <div className="dr-rag-grid">
+                      <div className="dr-rag-card">
+                        <h5>Hallazgos</h5>
+                        {ragFindings.length ? ragFindings.map((item, index) => (
+                          <div key={`finding-${index}`} className="dr-rag-item">
+                            <strong>{item.title}</strong>
+                            {item.detail && <span>{item.detail}</span>}
+                          </div>
+                        )) : <p className="dr-muted">Sin hallazgos reportados.</p>}
+                      </div>
+
+                      <div className="dr-rag-card">
+                        <h5>Campos faltantes</h5>
+                        {ragMissingFields.length ? ragMissingFields.map((item, index) => (
+                          <div key={`missing-${index}`} className="dr-rag-item">
+                            <strong>{item.title}</strong>
+                            {item.detail && <span>{item.detail}</span>}
+                          </div>
+                        )) : <p className="dr-muted">No se detectaron campos faltantes.</p>}
+                      </div>
+
+                      <div className="dr-rag-card">
+                        <h5>Inconsistencias</h5>
+                        {ragInconsistencies.length ? ragInconsistencies.map((item, index) => (
+                          <div key={`inconsistency-${index}`} className="dr-rag-item">
+                            <strong>{item.title}</strong>
+                            {item.detail && <span>{item.detail}</span>}
+                          </div>
+                        )) : <p className="dr-muted">No se detectaron inconsistencias.</p>}
+                      </div>
+
+                      <div className="dr-rag-card">
+                        <h5>Acciones sugeridas</h5>
+                        {ragActions.length ? ragActions.map((item, index) => (
+                          <div key={`action-${index}`} className="dr-rag-item">
+                            <strong>{item.title}</strong>
+                            {item.detail && <span>{item.detail}</span>}
+                          </div>
+                        )) : <p className="dr-muted">Sin acciones sugeridas.</p>}
+                      </div>
+                    </div>
+
+                    <div className="dr-rag-card dr-rag-card--wide">
+                      <h5>Fuentes / chunks usados</h5>
+                      {ragEvidence?.items?.length ? ragEvidence.items.map(item => (
+                        <div key={item.retrieval.id} className="dr-rag-source">
+                          <strong>#{item.retrieval.rank} · score {Number(item.retrieval.score || 0).toFixed(3)}</strong>
+                          <span>{item.chunk ? summarizeChunk(item.chunk.contentText) : 'Chunk no disponible.'}</span>
+                          <small>{item.chunk?.sourceId || item.retrieval.chunkId}</small>
+                        </div>
+                      )) : <p className="dr-muted">Sin evidencia recuperada.</p>}
+                    </div>
+
+                    <div className="dr-rag-feedback">
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        disabled={ragFeedbackSubmitting}
+                        onClick={() => void submitRagFeedback(true)}
+                      >
+                        Fue util
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        disabled={ragFeedbackSubmitting}
+                        onClick={() => setRagCorrectionMode(prev => !prev)}
+                      >
+                        Corregir
+                      </button>
+                    </div>
+
+                    {ragCorrectionMode && (
+                      <div className="dr-rag-correction">
+                        <textarea
+                          className="dr-input dr-input--textarea"
+                          value={ragCorrectionText}
+                          onChange={event => setRagCorrectionText(event.target.value)}
+                          placeholder="Describe que debe corregirse del analisis RAG."
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          disabled={ragFeedbackSubmitting || !ragCorrectionText.trim()}
+                          onClick={() => void submitRagFeedback(false)}
+                        >
+                          Enviar correccion
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </section>
             )}
 
             <DynamicRecordForm

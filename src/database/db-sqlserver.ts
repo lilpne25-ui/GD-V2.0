@@ -252,6 +252,7 @@ export async function runMigrations(): Promise<void> {
     '015_record_rules_engine.sql',
     '016_seed_record_type_fp05c.sql',
     '017_record_values_allow_scalar_json.sql',
+    '018_rag_core.sql',
   ];
 
   const appliedRows = await dbAll<{ filename: string }>('SELECT filename FROM dbo.schema_migrations');

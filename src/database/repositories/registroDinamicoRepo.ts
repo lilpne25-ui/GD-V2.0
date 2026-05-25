@@ -1,5 +1,6 @@
 import { dbAll, dbGet, dbRun, generateId } from '../db';
 import { evaluateRecordRules } from './recordRulesEngine';
+import * as XLSX from 'xlsx';
 import type {
   CreateRecordInput,
   GetRecordAuditHistoryInput,
@@ -199,6 +200,32 @@ export type RecordInstanceDetail = {
   workflow: RecordWorkflowState[];
 };
 
+export type ImportRecordTypeFromExcelInput = {
+  fileName: string;
+  workbookBase64: string;
+  sheetName?: string;
+  recordTypeCode?: string;
+  recordTypeName?: string;
+  description?: string;
+  actorUserId?: string;
+  actorUserName?: string;
+  actorRole?: string;
+  seedRows?: boolean;
+  seedRowsLimit?: number;
+};
+
+export type ImportRecordTypeFromExcelResult = {
+  recordTypeId: string;
+  recordTypeCode: string;
+  recordTypeName: string;
+  sheetName: string;
+  headerRowNumber: number;
+  fieldsCreated: number;
+  recordsSeeded: number;
+  skippedRows: number;
+  warnings: string[];
+};
+
 type ValueUpsertRow = {
   fieldKey: string;
   valueText: string | null;
@@ -302,6 +329,207 @@ const TRANSITION_LABEL_MAP: Record<RecordInstanceStatus, string> = {
 
 function normalizeText(value: unknown): string {
   return String(value ?? '').trim();
+}
+
+const MAX_EXCEL_IMPORT_COLUMNS = 120;
+const MAX_EXCEL_IMPORT_ROWS = 300;
+const DEFAULT_EXCEL_IMPORT_ROWS = 200;
+
+type ExcelCellPrimitive = string | number | boolean | Date | null | undefined;
+type ExcelRow = ExcelCellPrimitive[];
+
+function stripFileExtension(fileName: string): string {
+  return fileName.replace(/\.[^/.]+$/, '');
+}
+
+function normalizeExcelCellText(value: ExcelCellPrimitive): string {
+  if (value === null || value === undefined) return '';
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0, 10);
+  return String(value).replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function isNumericLikeText(value: string): boolean {
+  const normalized = value.replace(/\s+/g, '').replace(/,/g, '');
+  if (!normalized) return false;
+  return /^-?\d+(\.\d+)?$/.test(normalized);
+}
+
+function parseNumberFromText(value: string): number | null {
+  const normalized = value.replace(/\s+/g, '').replace(/,/g, '');
+  if (!normalized || !/^-?\d+(\.\d+)?$/.test(normalized)) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseDateToIso(value: string): string | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+
+  const dmyMatch = normalized.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2}|\d{4})$/);
+  if (dmyMatch) {
+    const day = Number(dmyMatch[1]);
+    const month = Number(dmyMatch[2]);
+    const yearRaw = Number(dmyMatch[3]);
+    const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+    const candidate = new Date(Date.UTC(year, month - 1, day));
+    if (candidate.getUTCFullYear() === year && candidate.getUTCMonth() === month - 1 && candidate.getUTCDate() === day) {
+      return candidate.toISOString().slice(0, 10);
+    }
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
+function normalizeBooleanFromText(value: string): boolean | null {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+  if (['1', 'true', 'si', 'yes', 'ok', 'x'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'n/a'].includes(normalized)) return false;
+  return null;
+}
+
+function rowHasValues(row: ExcelRow, columnIndexes?: number[]): boolean {
+  if (!row || !Array.isArray(row)) return false;
+  const indexes = columnIndexes && columnIndexes.length ? columnIndexes : row.map((_, idx) => idx);
+  return indexes.some(index => normalizeExcelCellText(row[index]).length > 0);
+}
+
+function normalizeFieldKey(label: string, index: number): string {
+  const normalized = label
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const base = normalized || `campo_${index + 1}`;
+  return /^[a-z_]/.test(base) ? base : `f_${base}`;
+}
+
+function normalizeRecordTypeCodeFromName(value: string): string {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const sliced = normalized.slice(0, 80);
+  return sliced || `FP_05_${Date.now()}`;
+}
+
+function detectHeaderRowIndex(rows: ExcelRow[]): number {
+  const scanLimit = Math.min(rows.length, 80);
+  let bestIndex = -1;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (let rowIndex = 0; rowIndex < scanLimit; rowIndex += 1) {
+    const row = rows[rowIndex];
+    if (!row || !row.length) continue;
+
+    const normalizedCells = row
+      .slice(0, MAX_EXCEL_IMPORT_COLUMNS)
+      .map(cell => normalizeExcelCellText(cell))
+      .filter(Boolean);
+
+    if (normalizedCells.length < 2) continue;
+
+    const alphaLike = normalizedCells.filter(cell => /[A-Za-z\u00C0-\u024F]/.test(cell)).length;
+    const numericLike = normalizedCells.filter(cell => isNumericLikeText(cell)).length;
+    const score = (normalizedCells.length * 10) + (alphaLike * 3) - (numericLike * 2) - (rowIndex * 0.05);
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = rowIndex;
+    }
+  }
+
+  if (bestIndex >= 0) return bestIndex;
+
+  const fallbackIndex = rows.findIndex(row => rowHasValues(row));
+  return fallbackIndex >= 0 ? fallbackIndex : 0;
+}
+
+function inferFieldTypeFromSamples(samples: string[]): { fieldType: RecordFieldType; options: RecordFieldOption[] } {
+  const filtered = samples.map(value => value.trim()).filter(Boolean);
+  if (!filtered.length) {
+    return { fieldType: 'text', options: [] };
+  }
+
+  const boolCount = filtered.filter(value => normalizeBooleanFromText(value) !== null).length;
+  if (boolCount === filtered.length) {
+    return { fieldType: 'checkbox', options: [] };
+  }
+
+  const numericCount = filtered.filter(value => parseNumberFromText(value) !== null).length;
+  if (numericCount === filtered.length) {
+    return { fieldType: 'number', options: [] };
+  }
+
+  const dateCount = filtered.filter(value => parseDateToIso(value) !== null).length;
+  if (dateCount === filtered.length) {
+    return { fieldType: 'date', options: [] };
+  }
+
+  const distinctValues = Array.from(new Set(filtered));
+  const distinctCount = distinctValues.length;
+  if (distinctCount >= 2 && distinctCount <= 8 && distinctCount <= Math.max(2, Math.floor(filtered.length * 0.6))) {
+    return {
+      fieldType: 'select',
+      options: distinctValues.slice(0, 25).map(value => ({ value, label: value })),
+    };
+  }
+
+  const maxLength = filtered.reduce((acc, value) => Math.max(acc, value.length), 0);
+  if (maxLength >= 120) {
+    return { fieldType: 'textarea', options: [] };
+  }
+
+  return { fieldType: 'text', options: [] };
+}
+
+function coerceExcelValueByFieldType(fieldType: RecordFieldType, rawValue: ExcelCellPrimitive): RecordValueInput | undefined {
+  const text = normalizeExcelCellText(rawValue);
+  if (!text) return undefined;
+
+  if (fieldType === 'checkbox') {
+    const boolValue = normalizeBooleanFromText(text);
+    return boolValue === null ? text : boolValue;
+  }
+
+  if (fieldType === 'number') {
+    const numeric = parseNumberFromText(text);
+    return numeric === null ? text : numeric;
+  }
+
+  if (fieldType === 'date') {
+    const iso = parseDateToIso(text);
+    return iso || text;
+  }
+
+  return text;
+}
+
+async function resolveAvailableRecordTypeCode(baseCode: string): Promise<string> {
+  const normalizedBase = normalizeRecordTypeCodeFromName(baseCode);
+  let candidate = normalizedBase;
+
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const existing = await loadRecordDefinitionByCode(candidate);
+    if (!existing) return candidate;
+
+    const suffix = `_${attempt + 2}`;
+    candidate = `${normalizedBase.slice(0, Math.max(1, 80 - suffix.length))}${suffix}`;
+  }
+
+  throw new Error('No se pudo generar un codigo unico para el tipo de registro importado.');
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return String(error || 'Error desconocido.');
 }
 
 async function resolveUserIdForForeignKey(userId: string | null | undefined): Promise<string | null> {
@@ -1279,6 +1507,230 @@ export const RegistroDinamicoRepo = {
     );
 
     return recordTypeId;
+  },
+
+  async importRecordTypeFromExcel(input: ImportRecordTypeFromExcelInput): Promise<ImportRecordTypeFromExcelResult> {
+    const fileName = normalizeText(input.fileName);
+    const workbookBase64 = normalizeText(input.workbookBase64);
+    const actorUserId = normalizeText(input.actorUserId);
+    const actorRole = normalizeText(input.actorRole) || 'admin';
+    const actorUserName = normalizeText(input.actorUserName) || actorUserId || 'Importador SGC';
+
+    if (!fileName) {
+      throw new Error('fileName es obligatorio para importar Excel.');
+    }
+
+    if (!workbookBase64) {
+      throw new Error('workbookBase64 es obligatorio para importar Excel.');
+    }
+
+    assertDefinitionPermission(actorUserId, actorRole);
+
+    const fileBaseName = stripFileExtension(fileName);
+    if (!/^FP-05/i.test(fileBaseName)) {
+      throw new Error('La importacion MVP actual solo acepta archivos FP-05.');
+    }
+
+    let workbookBuffer: Buffer;
+    try {
+      workbookBuffer = Buffer.from(workbookBase64, 'base64');
+    } catch {
+      throw new Error('No se pudo decodificar el contenido base64 del Excel.');
+    }
+
+    if (!workbookBuffer.length) {
+      throw new Error('El Excel recibido esta vacio.');
+    }
+
+    let workbook: XLSX.WorkBook;
+    try {
+      workbook = XLSX.read(workbookBuffer, { type: 'buffer', cellDates: false, raw: false });
+    } catch {
+      throw new Error('No se pudo leer el workbook. Verifica que sea un archivo .xlsx valido.');
+    }
+
+    if (!workbook.SheetNames.length) {
+      throw new Error('El workbook no contiene hojas para importar.');
+    }
+
+    const requestedSheetName = normalizeText(input.sheetName);
+    const selectedSheetName = requestedSheetName && workbook.SheetNames.includes(requestedSheetName)
+      ? requestedSheetName
+      : workbook.SheetNames[0];
+
+    const sheet = workbook.Sheets[selectedSheetName];
+    if (!sheet) {
+      throw new Error(`No se encontro la hoja "${selectedSheetName}" en el workbook.`);
+    }
+
+    const rawRows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      raw: false,
+      defval: '',
+      blankrows: false,
+    }) as ExcelRow[];
+
+    if (!rawRows.length) {
+      throw new Error('La hoja seleccionada no contiene datos.');
+    }
+
+    const headerRowIndex = detectHeaderRowIndex(rawRows);
+    const headerRow = rawRows[headerRowIndex] || [];
+    const warnings: string[] = [];
+
+    const fieldsWithColumn: Array<{ columnIndex: number; field: CreateRecordFieldInput }> = [];
+    const usedFieldKeys = new Set<string>();
+    const inspectedColumnCount = Math.min(
+      MAX_EXCEL_IMPORT_COLUMNS,
+      Math.max(headerRow.length, ...rawRows.slice(headerRowIndex, headerRowIndex + 30).map(row => row?.length || 0))
+    );
+
+    for (let columnIndex = 0; columnIndex < inspectedColumnCount; columnIndex += 1) {
+      const label = normalizeExcelCellText(headerRow[columnIndex]);
+      if (!label) continue;
+
+      let fieldKeyBase = normalizeFieldKey(label, columnIndex);
+      let fieldKey = fieldKeyBase;
+      let suffix = 2;
+      while (usedFieldKeys.has(fieldKey.toLowerCase())) {
+        fieldKey = `${fieldKeyBase}_${suffix}`;
+        suffix += 1;
+      }
+
+      if (fieldKey !== fieldKeyBase) {
+        warnings.push(`Campo duplicado detectado. Ajustado a "${fieldKey}".`);
+      }
+      usedFieldKeys.add(fieldKey.toLowerCase());
+
+      const samples: string[] = [];
+      for (let rowIndex = headerRowIndex + 1; rowIndex < rawRows.length && samples.length < 80; rowIndex += 1) {
+        const text = normalizeExcelCellText(rawRows[rowIndex]?.[columnIndex]);
+        if (text) samples.push(text);
+      }
+
+      const inferred = inferFieldTypeFromSamples(samples);
+      fieldsWithColumn.push({
+        columnIndex,
+        field: {
+          fieldKey,
+          label,
+          fieldType: inferred.fieldType,
+          required: false,
+          options: inferred.options,
+          displayOrder: fieldsWithColumn.length,
+          helpText: `Importado desde ${fileName}`,
+        },
+      });
+    }
+
+    if (!fieldsWithColumn.length) {
+      throw new Error('No se detectaron encabezados validos para construir campos dinamicos.');
+    }
+
+    const preferredCode = normalizeText(input.recordTypeCode) || fileBaseName;
+    const recordTypeCode = await resolveAvailableRecordTypeCode(preferredCode);
+    const recordTypeName = normalizeText(input.recordTypeName) || fileBaseName;
+    const description = normalizeText(input.description) || `Tipo importado desde ${fileName}`;
+
+    const recordTypeId = await RegistroDinamicoRepo.createRecordType({
+      code: recordTypeCode,
+      name: recordTypeName,
+      description,
+      actorUserId,
+      actorUserName,
+      actorRole,
+      settings: {
+        allowDraftAutosave: true,
+        enableWorkflow: true,
+        enableAudit: true,
+        defaultStatus: 'borrador',
+        tags: ['fp-05', 'excel-import'],
+        metadata: {
+          sourceFileName: fileName,
+          sourceSheetName: selectedSheetName,
+          headerRowNumber: headerRowIndex + 1,
+        },
+      },
+      fields: fieldsWithColumn.map(item => item.field),
+    });
+
+    const seedRows = input.seedRows !== false;
+    const rawSeedLimit = Number(input.seedRowsLimit);
+    const seedLimit = Number.isFinite(rawSeedLimit)
+      ? Math.max(0, Math.min(MAX_EXCEL_IMPORT_ROWS, Math.floor(rawSeedLimit)))
+      : DEFAULT_EXCEL_IMPORT_ROWS;
+
+    const columnIndexes = fieldsWithColumn.map(item => item.columnIndex);
+    const candidateRows = rawRows
+      .slice(headerRowIndex + 1)
+      .filter(row => rowHasValues(row, columnIndexes));
+
+    let recordsSeeded = 0;
+    let skippedRows = 0;
+
+    if (seedRows && seedLimit > 0) {
+      for (let rowOffset = 0; rowOffset < candidateRows.length; rowOffset += 1) {
+        if (recordsSeeded >= seedLimit) break;
+
+        const row = candidateRows[rowOffset];
+        const values: Record<string, RecordValueInput> = {};
+
+        fieldsWithColumn.forEach(item => {
+          const coerced = coerceExcelValueByFieldType(item.field.fieldType, row?.[item.columnIndex]);
+          if (coerced === undefined) return;
+          values[item.field.fieldKey] = coerced;
+        });
+
+        if (!Object.keys(values).length) {
+          skippedRows += 1;
+          continue;
+        }
+
+        const rowNumber = headerRowIndex + 2 + rowOffset;
+        const title = `${recordTypeName} #${recordsSeeded + 1}`;
+
+        try {
+          await RegistroDinamicoRepo.createRecordInstance({
+            recordTypeId,
+            title,
+            values,
+            createdBy: actorUserId,
+            createdByName: actorUserName,
+            role: actorRole,
+            source: 'migration',
+            metadata: {
+              importedFromExcel: true,
+              sourceFileName: fileName,
+              sourceSheetName: selectedSheetName,
+              sourceRowNumber: rowNumber,
+            },
+          });
+          recordsSeeded += 1;
+        } catch (error) {
+          skippedRows += 1;
+          if (warnings.length < 20) {
+            warnings.push(`Fila ${rowNumber} omitida: ${errorMessage(error)}`);
+          }
+        }
+      }
+    }
+
+    if (seedRows && candidateRows.length > seedLimit) {
+      warnings.push(`Se aplico limite de importacion de ${seedLimit} filas.`);
+      skippedRows += Math.max(0, candidateRows.length - seedLimit);
+    }
+
+    return {
+      recordTypeId,
+      recordTypeCode,
+      recordTypeName,
+      sheetName: selectedSheetName,
+      headerRowNumber: headerRowIndex + 1,
+      fieldsCreated: fieldsWithColumn.length,
+      recordsSeeded,
+      skippedRows,
+      warnings,
+    };
   },
 
   async getRecordTypeById(id: string): Promise<RecordDefinition | null> {

@@ -66,6 +66,13 @@ type DocumentoOfficePreview = {
   html: string;
 };
 
+type DocumentoDownloadPayload = {
+  fileName: string;
+  mimeType: string;
+  base64: string;
+  sizeBytes: number;
+};
+
 type DocumentoTrashRow = {
   id: string;
   root_node_id: string;
@@ -114,6 +121,31 @@ const toFileUri = (diskPath: string): string => {
   const normalized = diskPath.replace(/\\/g, '/');
   const withSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
   return encodeURI(`file://${withSlash}`);
+};
+
+const decodeBase64ToBytes = (rawBase64: string): Uint8Array => {
+  const binary = window.atob(rawBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+};
+
+const bytesToBlobPart = (bytes: Uint8Array): BlobPart => {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+};
+
+const triggerBlobDownload = (blob: Blob, fileName: string): void => {
+  const safeName = (fileName || 'documento').trim() || 'documento';
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = safeName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 };
 
 const parseRoleFromUnknown = (value: unknown): RolUsuario | null => {
@@ -1484,7 +1516,7 @@ const Documentacion: React.FC = () => {
         }
 
         const bytes = rawBuffer instanceof Uint8Array ? rawBuffer : new Uint8Array(rawBuffer);
-        const blob = new Blob([bytes], { type: doc.mimeType || 'application/octet-stream' });
+        const blob = new Blob([bytesToBlobPart(bytes)], { type: doc.mimeType || 'application/octet-stream' });
         const objectUrl = URL.createObjectURL(blob);
         objectUrlToRevoke = objectUrl;
         sourceUrl = objectUrl;
@@ -1550,17 +1582,34 @@ const Documentacion: React.FC = () => {
     };
   }, [previewObjectUrl]);
 
-  const exportDocument = (doc: DocNode) => {
+  const exportDocument = async (doc: DocNode) => {
+    try {
+      const payload = await callTreeRepo('getFileDownloadPayload', doc.id) as DocumentoDownloadPayload;
+      const bytes = decodeBase64ToBytes(String(payload?.base64 || ''));
+      if (!bytes.length) {
+        throw new Error('El archivo no contiene datos descargables.');
+      }
+
+      const blob = new Blob([bytesToBlobPart(bytes)], { type: payload?.mimeType || doc.mimeType || 'application/octet-stream' });
+      const fileName = payload?.fileName || doc.fileName || doc.name || doc.id;
+      triggerBlobDownload(blob, fileName);
+      return;
+    } catch {
+      // Fallback para compatibilidad temporal con rutas existentes.
+    }
+
     const sourceUrl = doc.storageMode === 'disk'
       ? (doc.fileDiskPath ? toFileUri(doc.fileDiskPath) : '')
       : (doc.fileUrl || '');
+    if (!sourceUrl) {
+      toast.error('No se pudo preparar la descarga del documento.');
+      return;
+    }
 
-    if (!sourceUrl) return;
     const fileNameBase = (doc.fileName || doc.name || doc.id).replace(/\s+/g, '-');
     const anchor = document.createElement('a');
     anchor.href = sourceUrl;
     anchor.download = fileNameBase;
-
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -2231,7 +2280,7 @@ const Documentacion: React.FC = () => {
                   <span className="win11-ctx-shortcut">Intro</span>
                 </button>
                 <button className="win11-ctx-item" role="menuitem"
-                  onClick={() => { exportDocument(node); closeMenu(); }}
+                  onClick={() => { void exportDocument(node); closeMenu(); }}
                 >
                   <span className="win11-ctx-icon"><DocUiIcon name="download" /></span>
                   <span className="win11-ctx-label">Exportar / Descargar</span>

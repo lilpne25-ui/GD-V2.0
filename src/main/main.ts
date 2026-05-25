@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import * as dotenv from 'dotenv';
 import { runMigrations } from '../database/db';
+import { registerRagIpcHandlers } from './ragIpc';
 import type {
   CreateRecordInput,
   GetRecordAuditHistoryInput,
@@ -35,7 +36,9 @@ type RepoName =
   | 'WorkflowRepo'
   | 'NotificacionRepo'
   | 'CorreoRepo'
-  | 'RegistroDinamicoRepo';
+  | 'RegistroDinamicoRepo'
+  | 'RagRepo'
+  | 'ReportesRepo';
 
 const repoLoaders: Record<RepoName, () => Promise<any>> = {
   DocumentoRepo: () => import('../database/repositories/documentoRepo'),
@@ -55,6 +58,8 @@ const repoLoaders: Record<RepoName, () => Promise<any>> = {
   NotificacionRepo: () => import('../database/repositories/notificacionRepo'),
   CorreoRepo: () => import('../database/repositories/correoRepo'),
   RegistroDinamicoRepo: () => import('../database/repositories/registroDinamicoRepo'),
+  RagRepo: () => import('../database/repositories/ragRepo'),
+  ReportesRepo: () => import('../database/repositories/reportesRepo'),
 };
 
 const repoCache = new Map<RepoName, any>();
@@ -492,6 +497,11 @@ function createWindow() {
 
 // Registrar puente IPC genérico para repositorios
 function registerIpcHandlers() {
+  registerRagIpcHandlers({
+    ensureStartupTasks,
+    normalizeIpcError,
+  });
+
   ipcMain.handle('repo:call', async (_event, payload: { repo: string; method: string; args?: any[] }) => {
     await ensureStartupTasks();
 

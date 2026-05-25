@@ -13,6 +13,18 @@ import type {
   TransitionRecordInput,
   UpdateRecordInput,
 } from '../shared/types/registros-dinamicos';
+import type {
+  AnalyzeRagRecordInput,
+  GetRagAnswerInput,
+  GetRagEvidenceInput,
+  IngestRagDocumentNodeInput,
+  RagAnalyzeRecordResult,
+  RagAnswer,
+  RagEvidenceResult,
+  RagIngestDocumentNodeResult,
+  RagStatusResult,
+  SubmitRagFeedbackInput,
+} from '../shared/types/rag';
 
 type RecordsApi = {
   create: (input: CreateRecordInput) => Promise<string>;
@@ -22,6 +34,15 @@ type RecordsApi = {
   getTransitions: (input: GetRecordTransitionsInput) => Promise<RecordTransitionOption[]>;
   getAuditHistory: (input: GetRecordAuditHistoryInput) => Promise<QueryRecordAuditHistoryResult>;
   transition: (input: TransitionRecordInput) => Promise<boolean>;
+};
+
+type RagApi = {
+  getStatus: () => Promise<RagStatusResult>;
+  analyzeRecord: (input: AnalyzeRagRecordInput) => Promise<RagAnalyzeRecordResult>;
+  ingestDocumentNode: (input: IngestRagDocumentNodeInput) => Promise<RagIngestDocumentNodeResult>;
+  getAnswer: (input: GetRagAnswerInput) => Promise<RagAnswer | null>;
+  submitFeedback: (input: SubmitRagFeedbackInput) => Promise<string>;
+  getEvidence: (input: GetRagEvidenceInput) => Promise<RagEvidenceResult>;
 };
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -52,3 +73,14 @@ const recordsApi: RecordsApi = {
 };
 
 contextBridge.exposeInMainWorld('records', recordsApi);
+
+const ragApi: RagApi = {
+  getStatus: () => ipcRenderer.invoke('rag:get-status'),
+  analyzeRecord: (input: AnalyzeRagRecordInput) => ipcRenderer.invoke('rag:analyze-record', input),
+  ingestDocumentNode: (input: IngestRagDocumentNodeInput) => ipcRenderer.invoke('rag:ingest-document-node', input),
+  getAnswer: (input: GetRagAnswerInput) => ipcRenderer.invoke('rag:get-answer', input),
+  submitFeedback: (input: SubmitRagFeedbackInput) => ipcRenderer.invoke('rag:submit-feedback', input),
+  getEvidence: (input: GetRagEvidenceInput) => ipcRenderer.invoke('rag:get-evidence', input),
+};
+
+contextBridge.exposeInMainWorld('rag', ragApi);

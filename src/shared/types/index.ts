@@ -16,3 +16,4 @@ export * from './competencias';
 export * from './satisfaccion-cliente';
 export * from './control-cambios';
 export * from './registros-dinamicos';
+export * from './rag';
