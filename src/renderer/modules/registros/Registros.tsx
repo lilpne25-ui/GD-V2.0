@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+import React, { useCallback, useRef, useState } from 'react';
+=======
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 import './Registros.css';
 import { toast } from '../../components/Toast';
 import EmptyState from '../../components/EmptyState';
@@ -8,7 +12,10 @@ import WorkflowPanel from './components/WorkflowPanel';
 import { openWordStudioPopup } from './wordStudioPopup';
 import SheetEditor from './components/SheetEditor';
 import DocumentEditor from './components/DocumentEditor';
+<<<<<<< HEAD
+=======
 import DynamicRecordsPanel, { isDynamicRecordsFeatureEnabled } from './components/DynamicRecordsPanel';
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 import { useRegistrosStorage } from './hooks/useRegistrosStorage';
 import { colToLabel, useSheetEngine } from './hooks/useSheetEngine';
 import { useDocumentacionSave } from './hooks/useDocumentacionSave';
@@ -84,7 +91,10 @@ const Registros: React.FC = () => {
   } = useDocumentacionSave();
 
   const docxInputRef = useRef<HTMLInputElement | null>(null);
+<<<<<<< HEAD
+=======
   const dynamicRecordsEnabled = useMemo(() => isDynamicRecordsFeatureEnabled(), []);
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
   const [regMainTab, setRegMainTab] = useState<RegistrosMainTab>('studio');
   const [wfDocs, setWfDocs] = useState<WfDocItem[]>([]);
@@ -239,6 +249,8 @@ const Registros: React.FC = () => {
         >
           📄 Mis documentos en revisión {wfDocs.filter(w => w.status === 'correcciones').length > 0 ? `(${wfDocs.filter(w => w.status === 'correcciones').length} pendientes)` : ''}
         </button>
+<<<<<<< HEAD
+=======
         {dynamicRecordsEnabled && (
           <button
             className={`mod-tab ${regMainTab === 'dynamic' ? 'active' : ''}`}
@@ -247,6 +259,7 @@ const Registros: React.FC = () => {
             🧩 Registros Dinamicos (BETA)
           </button>
         )}
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
       </div>
 
       {regMainTab === 'workflow' && (
@@ -262,10 +275,13 @@ const Registros: React.FC = () => {
         />
       )}
 
+<<<<<<< HEAD
+=======
       {dynamicRecordsEnabled && regMainTab === 'dynamic' && (
         <DynamicRecordsPanel />
       )}
 
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
       {regMainTab === 'studio' && (
         <div className="reg-layout">
           <aside className="reg-sidebar">

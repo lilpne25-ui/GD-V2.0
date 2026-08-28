@@ -758,6 +758,8 @@
   margin: 0;
   font-size: 13px;
 }
+<<<<<<< HEAD
+=======
 
 .dr-shell {
   display: grid;
@@ -1223,3 +1225,4 @@
     grid-template-columns: 1fr;
   }
 }
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6

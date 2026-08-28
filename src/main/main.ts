@@ -4,6 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import * as dotenv from 'dotenv';
 import { runMigrations } from '../database/db';
+<<<<<<< HEAD
+import { registerAuthIpc } from './ipc/authIpc';
+import { withAuth } from './ipc/authMiddleware';
+import { registerDashboardIpc } from './ipc/dashboardIpc';
+=======
 import { registerRagIpcHandlers } from './ragIpc';
 import type {
   CreateRecordInput,
@@ -18,6 +23,7 @@ import type {
   TransitionRecordInput,
   UpdateRecordInput,
 } from '../shared/types/registros-dinamicos';
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
 type RepoName =
   | 'DocumentoRepo'
@@ -35,10 +41,14 @@ type RepoName =
   | 'ControlCambiosRepo'
   | 'WorkflowRepo'
   | 'NotificacionRepo'
+<<<<<<< HEAD
+  | 'CorreoRepo';
+=======
   | 'CorreoRepo'
   | 'RegistroDinamicoRepo'
   | 'RagRepo'
   | 'ReportesRepo';
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
 const repoLoaders: Record<RepoName, () => Promise<any>> = {
   DocumentoRepo: () => import('../database/repositories/documentoRepo'),
@@ -57,13 +67,18 @@ const repoLoaders: Record<RepoName, () => Promise<any>> = {
   WorkflowRepo: () => import('../database/repositories/workflowRepo'),
   NotificacionRepo: () => import('../database/repositories/notificacionRepo'),
   CorreoRepo: () => import('../database/repositories/correoRepo'),
+<<<<<<< HEAD
+=======
   RegistroDinamicoRepo: () => import('../database/repositories/registroDinamicoRepo'),
   RagRepo: () => import('../database/repositories/ragRepo'),
   ReportesRepo: () => import('../database/repositories/reportesRepo'),
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 };
 
 const repoCache = new Map<RepoName, any>();
 
+<<<<<<< HEAD
+=======
 type RegistroDinamicoRepoContract = {
   createRecordInstance(input: CreateRecordInput): Promise<string>;
   updateRecordInstanceDraft(input: UpdateRecordInput): Promise<void>;
@@ -83,6 +98,7 @@ const RECORD_STATUS_VALUES: Array<TransitionRecordInput['toStatus']> = [
   'obsoleto',
 ];
 
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 async function getRepoByName(repoName: RepoName): Promise<any> {
   const cached = repoCache.get(repoName);
   if (cached) return cached;
@@ -102,6 +118,8 @@ async function getRepoByName(repoName: RepoName): Promise<any> {
   return repo;
 }
 
+<<<<<<< HEAD
+=======
 async function getRegistroDinamicoRepo(): Promise<RegistroDinamicoRepoContract> {
   return await getRepoByName('RegistroDinamicoRepo') as RegistroDinamicoRepoContract;
 }
@@ -287,6 +305,7 @@ function validateGetAuditHistoryPayload(payload: unknown): GetRecordAuditHistory
   };
 }
 
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 function loadEnvironment(): void {
   const candidates = app.isPackaged
     ? [
@@ -495,6 +514,61 @@ function createWindow() {
   });
 }
 
+<<<<<<< HEAD
+const ALLOWED_GENERIC_METHODS = ['getAll', 'getById', 'create', 'update', 'delete', 'listAll', 'count', 'list'];
+
+const ALLOWLIST: Record<string, string[]> = {
+  DocumentoTreeRepo: ['getById', 'create', 'update', 'delete', 'listAll', 'count', 'list', 'clearSignatures', 'getTree', 'getAncestors', 'listTrash', 'restoreTrash', 'purgeTrash'],
+  WorkflowRepo: ['getAll', 'getById', 'create', 'update', 'delete', 'listAll', 'count', 'list', 'getCorrections', 'listByUser', 'submitForReview', 'approve', 'reject'],
+  UsuarioRepo: [
+    'getAll', 
+    'getById',
+    'authenticate', 
+    'getDocumentPermissions', 
+    'getEmailPermission', 
+    'create', 
+    'setEmailPermission', 
+    'update', 
+    'setDocumentPermissions'
+  ],
+  CorreoRepo: ['getConfig', 'saveConfig', 'testConnection', 'sendEmail'],
+  NotificacionRepo: [...ALLOWED_GENERIC_METHODS, 'createForRole', 'listByUser', 'countUnread', 'markRead', 'markAllRead'],
+  AuditoriaRepo: ALLOWED_GENERIC_METHODS,
+  NCRepo: ALLOWED_GENERIC_METHODS,
+  CAPARepo: ALLOWED_GENERIC_METHODS,
+  RiesgoRepo: ALLOWED_GENERIC_METHODS,
+  IndicadorRepo: ALLOWED_GENERIC_METHODS,
+  ProveedorRepo: ALLOWED_GENERIC_METHODS,
+  RevisionDireccionRepo: ALLOWED_GENERIC_METHODS,
+  CompetenciaRepo: ALLOWED_GENERIC_METHODS,
+  SatisfaccionRepo: ALLOWED_GENERIC_METHODS,
+  ControlCambiosRepo: ALLOWED_GENERIC_METHODS,
+  DocumentoRepo: ALLOWED_GENERIC_METHODS
+};
+
+// Registrar puente IPC genérico para repositorios
+function registerIpcHandlers() {
+  registerAuthIpc();
+  registerDashboardIpc();
+  ipcMain.handle('repo:call', withAuth(async (event, payload: { repo: string; method: string; args?: any[] }) => {
+    await ensureStartupTasks();
+
+    const { repo, method, args = [] } = payload || {};
+
+    // 1. Bloqueo explícito de mutaciones de usuario destructivas
+    if (repo === 'UsuarioRepo' && (method === 'delete' || method === 'setPassword' || method === 'updatePassword')) {
+      console.error(`Security Alert: Destructive user mutation blocked on ${repo}: ${method}`);
+      throw new Error(`Unauthorized: Destructive operation ${method} is blocked.`);
+    }
+
+    // 2. Denegación por defecto mediante ALLOWLIST
+    const allowed = ALLOWLIST[repo] || [];
+    if (!allowed.includes(method)) {
+      console.error(`Security Alert: Unauthorized method ${method} on repository ${repo} blocked by default.`);
+      throw new Error(`Unauthorized: Method ${method} on ${repo} is not allowed.`);
+    }
+
+=======
 // Registrar puente IPC genérico para repositorios
 function registerIpcHandlers() {
   registerRagIpcHandlers({
@@ -506,10 +580,22 @@ function registerIpcHandlers() {
     await ensureStartupTasks();
 
     const { repo, method, args = [] } = payload || {};
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     const typedRepo = repo as RepoName;
     const repoModule = await getRepoByName(typedRepo);
     const fn = repoModule?.[method];
     if (typeof fn !== 'function') throw new Error(`Método no válido en ${repo}: ${method}`);
+<<<<<<< HEAD
+    
+    // Si se invoca la autenticación, inyectamos el ID del webContents emisor como argumento adicional
+    const finalArgs = [...args];
+    if (repo === 'UsuarioRepo' && method === 'authenticate') {
+      finalArgs.push(event.sender.id);
+    }
+    
+    return await fn.apply(repoModule, finalArgs);
+  }));
+=======
     return await fn.apply(repoModule, args);
   });
 
@@ -596,6 +682,7 @@ function registerIpcHandlers() {
       throw normalizeIpcError('records:transition', error);
     }
   });
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
   ipcMain.handle('window:set-content-protection', (event, enabled: boolean) => {
     const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;

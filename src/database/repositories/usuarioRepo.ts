@@ -71,8 +71,13 @@ async function ensureDocumentoPermisosSchema(): Promise<void> {
 }
 
 export const UsuarioRepo = {
+<<<<<<< HEAD
+  async getByLogin(login: string): Promise<UsuarioRow | null> {
+    const cleanLogin = String(login || '').trim();
+=======
   async authenticate(emailOrUser: string, password: string): Promise<UsuarioAuth | null> {
     const login = String(emailOrUser || '').trim();
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     const user = await dbGet<UsuarioRow>(
       `SELECT u.id, u.nombre, u.email, u.rol, u.departamento, u.activo, u.created_at, u.updated_at,
               COALESCE(uc.password, '') AS password
@@ -89,6 +94,31 @@ export const UsuarioRepo = {
              )) = lower(?)
        ORDER BY u.updated_at DESC
        LIMIT 1`,
+<<<<<<< HEAD
+      [cleanLogin, cleanLogin, cleanLogin, cleanLogin]
+    );
+    return user || null;
+  },
+
+  async authenticate(emailOrUser: string, password: string, webContentsId?: number): Promise<UsuarioAuth | null> {
+    // Delegar validación a AuthService para cumplir con la opacidad del hash y la gestión de sesiones
+    const { AuthService } = require('../../main/services/AuthService');
+    const res = await AuthService.authenticate(emailOrUser, password, webContentsId || 0);
+    if (res.success && res.session) {
+      const user = await this.getById(res.session.userId);
+      return user ? {
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        rol: user.rol,
+        departamento: user.departamento,
+        activo: user.activo,
+      } : null;
+    }
+    return null;
+  },
+
+=======
       [login, login, login, login]
     );
 
@@ -110,6 +140,7 @@ export const UsuarioRepo = {
       activo: user.activo,
     };
   },
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
   async getAll(): Promise<UsuarioRow[]> {
     return dbAll<UsuarioRow>(

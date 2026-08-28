@@ -66,6 +66,8 @@ type DocumentoOfficePreview = {
   html: string;
 };
 
+<<<<<<< HEAD
+=======
 type DocumentoDownloadPayload = {
   fileName: string;
   mimeType: string;
@@ -73,6 +75,7 @@ type DocumentoDownloadPayload = {
   sizeBytes: number;
 };
 
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 type DocumentoTrashRow = {
   id: string;
   root_node_id: string;
@@ -123,6 +126,8 @@ const toFileUri = (diskPath: string): string => {
   return encodeURI(`file://${withSlash}`);
 };
 
+<<<<<<< HEAD
+=======
 const decodeBase64ToBytes = (rawBase64: string): Uint8Array => {
   const binary = window.atob(rawBase64);
   const bytes = new Uint8Array(binary.length);
@@ -148,6 +153,7 @@ const triggerBlobDownload = (blob: Blob, fileName: string): void => {
   URL.revokeObjectURL(url);
 };
 
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 const parseRoleFromUnknown = (value: unknown): RolUsuario | null => {
   if (typeof value !== 'string') return null;
   const role = value.trim();
@@ -1516,7 +1522,11 @@ const Documentacion: React.FC = () => {
         }
 
         const bytes = rawBuffer instanceof Uint8Array ? rawBuffer : new Uint8Array(rawBuffer);
+<<<<<<< HEAD
+        const blob = new Blob([bytes], { type: doc.mimeType || 'application/octet-stream' });
+=======
         const blob = new Blob([bytesToBlobPart(bytes)], { type: doc.mimeType || 'application/octet-stream' });
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
         const objectUrl = URL.createObjectURL(blob);
         objectUrlToRevoke = objectUrl;
         sourceUrl = objectUrl;
@@ -1582,6 +1592,14 @@ const Documentacion: React.FC = () => {
     };
   }, [previewObjectUrl]);
 
+<<<<<<< HEAD
+  const exportDocument = (doc: DocNode) => {
+    const sourceUrl = doc.storageMode === 'disk'
+      ? (doc.fileDiskPath ? toFileUri(doc.fileDiskPath) : '')
+      : (doc.fileUrl || '');
+
+    if (!sourceUrl) return;
+=======
   const exportDocument = async (doc: DocNode) => {
     try {
       const payload = await callTreeRepo('getFileDownloadPayload', doc.id) as DocumentoDownloadPayload;
@@ -1606,10 +1624,15 @@ const Documentacion: React.FC = () => {
       return;
     }
 
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     const fileNameBase = (doc.fileName || doc.name || doc.id).replace(/\s+/g, '-');
     const anchor = document.createElement('a');
     anchor.href = sourceUrl;
     anchor.download = fileNameBase;
+<<<<<<< HEAD
+
+=======
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -2280,7 +2303,11 @@ const Documentacion: React.FC = () => {
                   <span className="win11-ctx-shortcut">Intro</span>
                 </button>
                 <button className="win11-ctx-item" role="menuitem"
+<<<<<<< HEAD
+                  onClick={() => { exportDocument(node); closeMenu(); }}
+=======
                   onClick={() => { void exportDocument(node); closeMenu(); }}
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
                 >
                   <span className="win11-ctx-icon"><DocUiIcon name="download" /></span>
                   <span className="win11-ctx-label">Exportar / Descargar</span>

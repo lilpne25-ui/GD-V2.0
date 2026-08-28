@@ -1,3 +1,50 @@
+<<<<<<< HEAD
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Compiler outputs
+dist/
+build/
+out/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database files
+*.db
+*.sqlite
+backups/
+
+# System or temporary files
+reports/phase-00-baseline.md
+reports/phase-07-pre-cutover.md
+reports/phase-09-post-cutover.md
+scripts/smoke-test-auth-ipc.js
+scripts/020a_dry_run_passwords.js
+scripts/020b_migrate_passwords.js
+=======
 node_modules/
 dist/
 backups/*
@@ -9,3 +56,4 @@ backups/*
 *.log
 .DS_Store
 Thumbs.db
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6

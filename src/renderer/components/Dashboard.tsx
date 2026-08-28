@@ -66,6 +66,15 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     setLoadError('');
     try {
+<<<<<<< HEAD
+      const metrics = await (window as any).dashboard.getMetrics();
+
+      setDocumentos(Number(metrics.documentos || 0));
+      setCarpetas(Number(metrics.carpetas || 0));
+      setPendientesRevision(Number(metrics.pendientesRevision || 0));
+      setUsuariosActivos(Number(metrics.usuariosActivos || 0));
+      setAuditTrail(Array.isArray(metrics.auditTrail) ? metrics.auditTrail : []);
+=======
       const [nodes, pending, users, audit] = await Promise.all([
         (window as any).repo.call('DocumentoTreeRepo', 'getAll') as Promise<DocumentoNodoUI[]>,
         (window as any).repo.call('WorkflowRepo', 'countPending') as Promise<number>,
@@ -83,6 +92,7 @@ const Dashboard: React.FC = () => {
       setPendientesRevision(Number(pending || 0));
       setUsuariosActivos(activeUsers);
       setAuditTrail(Array.isArray(audit) ? audit : []);
+>>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     } catch (error) {
       console.error(error);
       setLoadError('No se pudo cargar la informacion del dashboard.');
