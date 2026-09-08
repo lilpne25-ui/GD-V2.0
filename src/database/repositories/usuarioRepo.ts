@@ -71,13 +71,8 @@ async function ensureDocumentoPermisosSchema(): Promise<void> {
 }
 
 export const UsuarioRepo = {
-<<<<<<< HEAD
   async getByLogin(login: string): Promise<UsuarioRow | null> {
     const cleanLogin = String(login || '').trim();
-=======
-  async authenticate(emailOrUser: string, password: string): Promise<UsuarioAuth | null> {
-    const login = String(emailOrUser || '').trim();
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     const user = await dbGet<UsuarioRow>(
       `SELECT u.id, u.nombre, u.email, u.rol, u.departamento, u.activo, u.created_at, u.updated_at,
               COALESCE(uc.password, '') AS password
@@ -94,7 +89,6 @@ export const UsuarioRepo = {
              )) = lower(?)
        ORDER BY u.updated_at DESC
        LIMIT 1`,
-<<<<<<< HEAD
       [cleanLogin, cleanLogin, cleanLogin, cleanLogin]
     );
     return user || null;
@@ -118,29 +112,6 @@ export const UsuarioRepo = {
     return null;
   },
 
-=======
-      [login, login, login, login]
-    );
-
-    if (!user) return null;
-    if (Number(user.activo) !== 1) return null;
-    const provided = String(password || '');
-    const providedTrimmed = provided.trim();
-    const stored = String(user.password || '');
-    const storedTrimmed = stored.trim();
-
-    if (stored !== provided && storedTrimmed !== providedTrimmed) return null;
-
-    return {
-      id: user.id,
-      nombre: user.nombre,
-      email: user.email,
-      rol: user.rol,
-      departamento: user.departamento,
-      activo: user.activo,
-    };
-  },
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
   async getAll(): Promise<UsuarioRow[]> {
     return dbAll<UsuarioRow>(

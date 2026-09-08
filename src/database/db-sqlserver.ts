@@ -1,7 +1,6 @@
 import sql from 'mssql';
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
 
 type SqlParams = any[];
 
@@ -24,15 +23,8 @@ function isTruthy(value: string | undefined, fallback: boolean): boolean {
 function getSqlConfig(): sql.config {
   const server = process.env.SGC_DB_SERVER || process.env.DB_SERVER || 'localhost';
   const database = process.env.SGC_DB_DATABASE || process.env.DB_DATABASE || 'SGC_Dev';
-<<<<<<< HEAD
   const user = process.env.SGC_DB_USER || process.env.DB_USER || '';
   const password = process.env.SGC_DB_PASSWORD || process.env.DB_PASSWORD || '';
-=======
-  const defaultPackagedUser = app.isPackaged ? 'sa' : '';
-  const defaultPackagedPassword = app.isPackaged ? 'NuevaContraseña123!' : '';
-  const user = process.env.SGC_DB_USER || process.env.DB_USER || defaultPackagedUser;
-  const password = process.env.SGC_DB_PASSWORD || process.env.DB_PASSWORD || defaultPackagedPassword;
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
   const trusted = isTruthy(process.env.SGC_DB_TRUSTED, false) || (!user && !password);
   const encrypt = isTruthy(process.env.SGC_DB_ENCRYPT || process.env.DB_ENCRYPT, false);
   const trustServerCertificate = isTruthy(
@@ -252,15 +244,12 @@ export async function runMigrations(): Promise<void> {
     '010_document_audit_log.sql',
     '011_workflow_notifications.sql',
     '012_user_email_config.sql',
-<<<<<<< HEAD
-=======
     '013_document_trash.sql',
     '014_dynamic_records_engine.sql',
     '015_record_rules_engine.sql',
     '016_seed_record_type_fp05c.sql',
     '017_record_values_allow_scalar_json.sql',
     '018_rag_core.sql',
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
   ];
 
   const appliedRows = await dbAll<{ filename: string }>('SELECT filename FROM dbo.schema_migrations');

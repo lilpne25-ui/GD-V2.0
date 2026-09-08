@@ -1,7 +1,5 @@
 // Script de preload para exponer APIs seguras a renderer
 import { contextBridge, ipcRenderer } from 'electron';
-<<<<<<< HEAD
-=======
 import type {
   CreateRecordInput,
   GetRecordAuditHistoryInput,
@@ -46,7 +44,6 @@ type RagApi = {
   submitFeedback: (input: SubmitRagFeedbackInput) => Promise<string>;
   getEvidence: (input: GetRagEvidenceInput) => Promise<RagEvidenceResult>;
 };
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Ejemplo: enviar mensaje
@@ -65,7 +62,6 @@ contextBridge.exposeInMainWorld('repo', {
     ipcRenderer.invoke('repo:call', { repo, method, args })
 });
 
-<<<<<<< HEAD
 // Puente seguro para la autenticación y sesiones
 contextBridge.exposeInMainWorld('auth', {
   login: (login: string, password?: string) =>
@@ -82,7 +78,6 @@ contextBridge.exposeInMainWorld('dashboard', {
 });
 
 
-=======
 const recordsApi: RecordsApi = {
   create: (input: CreateRecordInput) => ipcRenderer.invoke('records:create', input),
   update: (input: UpdateRecordInput) => ipcRenderer.invoke('records:update', input),
@@ -105,4 +100,3 @@ const ragApi: RagApi = {
 };
 
 contextBridge.exposeInMainWorld('rag', ragApi);
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6

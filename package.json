@@ -38,21 +38,15 @@
     "start": "concurrently \"npm:dev:react\" \"npm:dev:main\" \"npm:dev:electron\"",
     "dev:react": "webpack serve --config webpack.renderer.js --mode development --host 0.0.0.0",
     "dev:main": "webpack --config webpack.main.js --mode development --watch",
-    "dev:electron": "wait-on tcp:3002 dist/main.bundle.js && electron .",
+    "dev:electron": "wait-on http-get://localhost:3002 dist/main.bundle.js && electron .",
     "rebuild:native": "electron-rebuild -f -w sqlite3",
     "migrate:data:sqlite-to-mssql": "node scripts/migrate-sqlite-to-mssql.js",
-<<<<<<< HEAD
-    "build": "webpack --config webpack.main.js --mode production && webpack --config webpack.renderer.js --mode production && electron-builder"
-  },
-  "dependencies": {
-    "bcryptjs": "^3.0.3",
-=======
     "typecheck": "tsc --noEmit",
     "smoke:rag": "node scripts/rag-smoke-mssql.js",
     "build": "webpack --config webpack.renderer.js --mode production && webpack --config webpack.main.js --mode production && electron-builder"
   },
   "dependencies": {
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
+    "bcryptjs": "^3.0.3",
     "docx": "^9.6.0",
     "dotenv": "^17.3.1",
     "googleapis": "^171.4.0",
@@ -67,10 +61,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
-<<<<<<< HEAD
     "@types/bcryptjs": "^2.4.6",
-=======
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     "@types/mssql": "^9.1.9",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",

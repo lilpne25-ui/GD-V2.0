@@ -1,14 +1,17 @@
 // Punto de entrada principal del proceso Electron
 import { app, BrowserWindow, globalShortcut, ipcMain, shell } from 'electron';
+
+// Deshabilitar aceleración por hardware para evitar fallos del proceso GPU en Windows
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch('disable-gpu');
+app.commandLine.appendSwitch('disable-software-rasterizer');
 import fs from 'fs';
 import path from 'path';
 import * as dotenv from 'dotenv';
 import { runMigrations } from '../database/db';
-<<<<<<< HEAD
 import { registerAuthIpc } from './ipc/authIpc';
 import { withAuth } from './ipc/authMiddleware';
 import { registerDashboardIpc } from './ipc/dashboardIpc';
-=======
 import { registerRagIpcHandlers } from './ragIpc';
 import type {
   CreateRecordInput,
@@ -23,7 +26,6 @@ import type {
   TransitionRecordInput,
   UpdateRecordInput,
 } from '../shared/types/registros-dinamicos';
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
 type RepoName =
   | 'DocumentoRepo'
@@ -41,14 +43,10 @@ type RepoName =
   | 'ControlCambiosRepo'
   | 'WorkflowRepo'
   | 'NotificacionRepo'
-<<<<<<< HEAD
-  | 'CorreoRepo';
-=======
   | 'CorreoRepo'
   | 'RegistroDinamicoRepo'
   | 'RagRepo'
   | 'ReportesRepo';
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
 const repoLoaders: Record<RepoName, () => Promise<any>> = {
   DocumentoRepo: () => import('../database/repositories/documentoRepo'),
@@ -67,18 +65,13 @@ const repoLoaders: Record<RepoName, () => Promise<any>> = {
   WorkflowRepo: () => import('../database/repositories/workflowRepo'),
   NotificacionRepo: () => import('../database/repositories/notificacionRepo'),
   CorreoRepo: () => import('../database/repositories/correoRepo'),
-<<<<<<< HEAD
-=======
   RegistroDinamicoRepo: () => import('../database/repositories/registroDinamicoRepo'),
   RagRepo: () => import('../database/repositories/ragRepo'),
   ReportesRepo: () => import('../database/repositories/reportesRepo'),
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 };
 
 const repoCache = new Map<RepoName, any>();
 
-<<<<<<< HEAD
-=======
 type RegistroDinamicoRepoContract = {
   createRecordInstance(input: CreateRecordInput): Promise<string>;
   updateRecordInstanceDraft(input: UpdateRecordInput): Promise<void>;
@@ -98,7 +91,6 @@ const RECORD_STATUS_VALUES: Array<TransitionRecordInput['toStatus']> = [
   'obsoleto',
 ];
 
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 async function getRepoByName(repoName: RepoName): Promise<any> {
   const cached = repoCache.get(repoName);
   if (cached) return cached;
@@ -118,8 +110,6 @@ async function getRepoByName(repoName: RepoName): Promise<any> {
   return repo;
 }
 
-<<<<<<< HEAD
-=======
 async function getRegistroDinamicoRepo(): Promise<RegistroDinamicoRepoContract> {
   return await getRepoByName('RegistroDinamicoRepo') as RegistroDinamicoRepoContract;
 }
@@ -305,7 +295,6 @@ function validateGetAuditHistoryPayload(payload: unknown): GetRecordAuditHistory
   };
 }
 
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 function loadEnvironment(): void {
   const candidates = app.isPackaged
     ? [
@@ -456,11 +445,15 @@ function setWindowContentProtection(enabled: boolean) {
 function createWindow() {
   const isDev = !app.isPackaged;
 
+  console.log('[main] Creando BrowserWindow...');
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    center: true,
+    title: 'Sistema de Gestión de Calidad (SGC)',
+    show: true,
     webPreferences: {
-      preload: __dirname + '/preload.js',
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       devTools: isDev,
@@ -472,35 +465,58 @@ function createWindow() {
   const localIndexPath = path.join(__dirname, 'index.html');
 
   let reloadAttempts = 0;
-  const maxReloadAttempts = 10;
+  const maxReloadAttempts = 15;
 
   const openRenderer = () => {
     if (resolvedRendererTarget) {
-      void win.loadURL(resolvedRendererTarget).catch(() => {
-        // El evento did-fail-load realizará reintentos/fallback.
+      console.log(`[main] Cargando URL del renderer: ${resolvedRendererTarget}`);
+      win.loadURL(resolvedRendererTarget).catch((err) => {
+        console.error('[main] Error al cargar URL inicial:', err);
       });
       return;
     }
-    void win.loadFile(localIndexPath);
+    console.log(`[main] Cargando archivo local: ${localIndexPath}`);
+    win.loadFile(localIndexPath).catch((err) => {
+      console.error('[main] Error al cargar archivo local:', err);
+    });
   };
 
-  win.webContents.on('did-fail-load', () => {
+  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.warn(`[main] did-fail-load: code=${errorCode} (${errorDescription}) en ${validatedURL}`);
     const shouldRetryDevServer =
       resolvedRendererTarget.startsWith('http://') || resolvedRendererTarget.startsWith('https://');
 
     if (shouldRetryDevServer && reloadAttempts < maxReloadAttempts) {
       reloadAttempts += 1;
+      console.log(`[main] Reintentando conectar al dev server (${reloadAttempts}/${maxReloadAttempts})...`);
       setTimeout(() => {
         if (!win.isDestroyed()) {
           void win.loadURL(resolvedRendererTarget);
         }
-      }, 700);
+      }, 1000);
       return;
     }
 
-    if (!win.isDestroyed()) {
+    if (!win.isDestroyed() && fs.existsSync(localIndexPath)) {
+      console.log('[main] Fallback a archivo local index.html');
       void win.loadFile(localIndexPath);
     }
+  });
+
+  win.once('ready-to-show', () => {
+    console.log('[main] ready-to-show disparado. Mostrando y enfocando ventana.');
+    win.show();
+    win.focus();
+  });
+
+  win.webContents.on('did-finish-load', () => {
+    console.log('[main] Renderer cargado exitosamente en:', win.webContents.getURL());
+    win.show();
+    win.focus();
+  });
+
+  win.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[main] Renderer process gone:', details);
   });
 
   openRenderer();
@@ -508,18 +524,29 @@ function createWindow() {
   win.setContentProtection(contentProtectionEnabled);
 
   win.on('closed', () => {
+    console.log('[main] Ventana cerrada.');
     if (mainWindow === win) {
       mainWindow = null;
     }
   });
 }
 
-<<<<<<< HEAD
 const ALLOWED_GENERIC_METHODS = ['getAll', 'getById', 'create', 'update', 'delete', 'listAll', 'count', 'list'];
 
 const ALLOWLIST: Record<string, string[]> = {
-  DocumentoTreeRepo: ['getById', 'create', 'update', 'delete', 'listAll', 'count', 'list', 'clearSignatures', 'getTree', 'getAncestors', 'listTrash', 'restoreTrash', 'purgeTrash'],
-  WorkflowRepo: ['getAll', 'getById', 'create', 'update', 'delete', 'listAll', 'count', 'list', 'getCorrections', 'listByUser', 'submitForReview', 'approve', 'reject'],
+  DocumentoTreeRepo: [
+    ...ALLOWED_GENERIC_METHODS,
+    'clearSignatures', 'getTree', 'getAncestors', 'listTrash', 'restoreTrash', 'purgeTrash',
+    // Superficie realmente usada por el modulo de documentacion
+    'createFile', 'createFileFromPath', 'createFolder', 'deleteNode', 'deleteTrashItem',
+    'restoreTrashItem', 'moveNode', 'renameNode', 'addSignature', 'listSignatures',
+    'listAuditTrail', 'getOfficePreview', 'getFileDownloadPayload'
+  ],
+  WorkflowRepo: [
+    ...ALLOWED_GENERIC_METHODS,
+    'getCorrections', 'listByUser', 'submitForReview', 'approve', 'reject',
+    'countPending', 'getByNodeId', 'listByStatus', 'requestCorrection'
+  ],
   UsuarioRepo: [
     'getAll', 
     'getById',
@@ -531,7 +558,7 @@ const ALLOWLIST: Record<string, string[]> = {
     'update', 
     'setDocumentPermissions'
   ],
-  CorreoRepo: ['getConfig', 'saveConfig', 'testConnection', 'sendEmail'],
+  CorreoRepo: ['getConfig', 'saveConfig', 'testConnection', 'sendEmail', 'sendNotificationEmail'],
   NotificacionRepo: [...ALLOWED_GENERIC_METHODS, 'createForRole', 'listByUser', 'countUnread', 'markRead', 'markAllRead'],
   AuditoriaRepo: ALLOWED_GENERIC_METHODS,
   NCRepo: ALLOWED_GENERIC_METHODS,
@@ -543,13 +570,20 @@ const ALLOWLIST: Record<string, string[]> = {
   CompetenciaRepo: ALLOWED_GENERIC_METHODS,
   SatisfaccionRepo: ALLOWED_GENERIC_METHODS,
   ControlCambiosRepo: ALLOWED_GENERIC_METHODS,
-  DocumentoRepo: ALLOWED_GENERIC_METHODS
+  DocumentoRepo: ALLOWED_GENERIC_METHODS,
+  RegistroDinamicoRepo: ['listRecordTypes', 'importRecordTypeFromExcel'],
+  ReportesRepo: ALLOWED_GENERIC_METHODS
 };
 
 // Registrar puente IPC genérico para repositorios
 function registerIpcHandlers() {
   registerAuthIpc();
   registerDashboardIpc();
+  registerRagIpcHandlers({
+    ensureStartupTasks,
+    normalizeIpcError,
+  });
+
   ipcMain.handle('repo:call', withAuth(async (event, payload: { repo: string; method: string; args?: any[] }) => {
     await ensureStartupTasks();
 
@@ -568,24 +602,10 @@ function registerIpcHandlers() {
       throw new Error(`Unauthorized: Method ${method} on ${repo} is not allowed.`);
     }
 
-=======
-// Registrar puente IPC genérico para repositorios
-function registerIpcHandlers() {
-  registerRagIpcHandlers({
-    ensureStartupTasks,
-    normalizeIpcError,
-  });
-
-  ipcMain.handle('repo:call', async (_event, payload: { repo: string; method: string; args?: any[] }) => {
-    await ensureStartupTasks();
-
-    const { repo, method, args = [] } = payload || {};
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     const typedRepo = repo as RepoName;
     const repoModule = await getRepoByName(typedRepo);
     const fn = repoModule?.[method];
     if (typeof fn !== 'function') throw new Error(`Método no válido en ${repo}: ${method}`);
-<<<<<<< HEAD
     
     // Si se invoca la autenticación, inyectamos el ID del webContents emisor como argumento adicional
     const finalArgs = [...args];
@@ -595,9 +615,6 @@ function registerIpcHandlers() {
     
     return await fn.apply(repoModule, finalArgs);
   }));
-=======
-    return await fn.apply(repoModule, args);
-  });
 
   ipcMain.handle('records:create', async (_event, payload: unknown) => {
     await ensureStartupTasks();
@@ -682,7 +699,6 @@ function registerIpcHandlers() {
       throw normalizeIpcError('records:transition', error);
     }
   });
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
   ipcMain.handle('window:set-content-protection', (event, enabled: boolean) => {
     const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
@@ -741,9 +757,12 @@ function registerIpcHandlers() {
 }
 
 app.whenReady().then(() => {
+  console.log('[main] app.whenReady disparado. Registrando IPC y creando ventana...');
   registerIpcHandlers();
   createWindow();
   void ensureStartupTasks();
+}).catch((err) => {
+  console.error('[main] Error crítico en app.whenReady:', err);
 });
 
 app.on('window-all-closed', () => {
