@@ -1,5 +1,6 @@
-import bcrypt from 'bcryptjs';
 import { UsuarioRepo } from '../../database/repositories/usuarioRepo';
+import { CredencialRepo } from '../../database/repositories/credencialRepo';
+import { verifyPassword } from './CredentialService';
 import { SessionManager } from './SessionManager';
 import { AuthResponse, SessionRecord } from '../../shared';
 
@@ -33,9 +34,12 @@ export const AuthService = {
         };
       }
 
-      // Validación backend mediante Bcrypt
-      const hash = user.password || '';
-      const isMatch = bcrypt.compareSync(password, hash);
+      // Validacion backend mediante Bcrypt.
+      // El hash se obtiene del repositorio de credenciales: el modelo publico
+      // de usuario ya no transporta la contrasena. Una credencial legacy en
+      // texto plano NO autentica (verifyPassword solo acepta bcrypt valido).
+      const hash = await CredencialRepo.getHashByUserId(user.id);
+      const isMatch = verifyPassword(password, hash);
 
       if (!isMatch) {
         return {

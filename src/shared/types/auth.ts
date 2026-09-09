@@ -17,7 +17,7 @@ export interface AuthCredentials {
   login: string;
   // Regla de Seguridad: No incluir contraseñas en texto plano ni hashes en el contrato compartido.
   // La validación de la credencial confidencial se realiza a través de un canal seguro y aislado.
-  authMethod: 'local_db' | 'active_directory' | 'demo_bypass';
+  authMethod: 'local_db' | 'active_directory';
   totpToken?: string;
 }
 

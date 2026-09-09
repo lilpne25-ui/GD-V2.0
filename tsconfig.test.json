@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist-test",
+    "noEmit": false,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": [
+    "src/main/services/CredentialService.ts",
+    "src/main/services/FileAccessPolicy.ts",
+    "src/main/services/SessionManager.ts",
+    "src/main/ipc/authMiddleware.ts",
+    "src/database/db-sqlserver.ts",
+    "src/database/repositories/credencialRepo.ts",
+    "src/shared/**/*.ts"
+  ]
+}

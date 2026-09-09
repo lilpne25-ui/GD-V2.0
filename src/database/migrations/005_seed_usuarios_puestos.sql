@@ -48,7 +48,5 @@ INSERT OR IGNORE INTO usuarios (id, nombre, email, rol, departamento, activo, cr
   ('org-043', 'XINGU GUTIERREZ SALVADOR', 'u043@empresa.com', '9.2 TÉCNICO DE MANTENIMIENTO', 'Mecatrónica y Mantenimiento', 1, datetime('now'), datetime('now')),
   ('org-044', 'REYES LOPEZ DIEGO', 'u044@empresa.com', '9.2 TÉCNICO DE MANTENIMIENTO', 'Mecatrónica y Mantenimiento', 1, datetime('now'), datetime('now'));
 
-INSERT OR IGNORE INTO usuario_credenciales (user_id, password, updated_at)
-SELECT id, '123456', datetime('now')
-FROM usuarios
-WHERE id LIKE 'org-%';
+-- Fase 0.5: no se siembran credenciales. Bootstrap explicito.
+-- (bloque de siembra de contrasenas eliminado intencionalmente)

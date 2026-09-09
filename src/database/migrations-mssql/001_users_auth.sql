@@ -66,7 +66,7 @@ IF OBJECT_ID('dbo.usuario_credenciales', 'U') IS NULL
 BEGIN
   CREATE TABLE dbo.usuario_credenciales (
     user_id NVARCHAR(64) NOT NULL CONSTRAINT PK_usuario_credenciales PRIMARY KEY,
-    [password] NVARCHAR(255) NOT NULL CONSTRAINT DF_usuario_credenciales_password DEFAULT '123456',
+    [password] NVARCHAR(255) NOT NULL,
     updated_at DATETIME2(0) NOT NULL CONSTRAINT DF_usuario_credenciales_updated_at DEFAULT SYSDATETIME(),
     CONSTRAINT FK_usuario_credenciales_user FOREIGN KEY (user_id) REFERENCES dbo.usuarios(id) ON DELETE CASCADE
   );
@@ -110,11 +110,8 @@ BEGIN
   VALUES ('usr-calidad', N'Resp. Calidad', 'calidad@empresa.com', 'responsable_calidad', N'Calidad');
 END;
 
-INSERT INTO dbo.usuario_credenciales (user_id, [password], updated_at)
-SELECT u.id, '123456', SYSDATETIME()
-FROM dbo.usuarios u
-WHERE NOT EXISTS (
-  SELECT 1 FROM dbo.usuario_credenciales c WHERE c.user_id = u.id
-);
+-- Fase 0.5: no se siembran credenciales con una contrasena conocida.
+-- El primer administrador se crea con un mecanismo de bootstrap explicito
+-- (scripts/bootstrap-admin.js). Ver docs/security/AUTH_HARDENING_0_5.md.
 
 PRINT 'Migration 001_users_auth.sql aplicada correctamente.';
