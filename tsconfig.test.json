@@ -12,6 +12,7 @@
     "src/main/services/SessionManager.ts",
     "src/main/ipc/authMiddleware.ts",
     "src/database/db-sqlserver.ts",
+    "src/database/repositories/credencialRepo.ts",
     "src/shared/**/*.ts"
   ]
 }

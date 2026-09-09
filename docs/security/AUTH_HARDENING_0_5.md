@@ -131,6 +131,25 @@ Garantías verificadas por tests: idempotente (segunda ejecución migra 0), no
 destruye usuarios, no resetea contraseñas y **no imprime jamás la contraseña ni
 el hash completo**.
 
+### Alta atómica de usuario + credencial
+
+La capa de datos no expone transacciones, así que `createUserWithCredential()`
+(en `CredentialService.ts`) garantiza que nunca quede un usuario sin credencial:
+
+1. **Validar y hashear antes de insertar.** Contraseña vacía o fallo de hashing
+   abortan *antes* de tocar la tabla `usuarios`.
+2. **Insertar el usuario.**
+3. **Escribir la credencial**; si falla, se elimina el usuario recién insertado
+   (rollback compensatorio) y se propaga el error original.
+
+Si el propio rollback falla, se registra el `user_id` afectado. Ese usuario
+quedaría sin credencial y, por diseño fail-closed, **no puede iniciar sesión**.
+
+`CredencialRepo.setPasswordHash()` es la última línea de defensa: rechaza
+cualquier valor que no sea un hash bcrypt válido, de modo que un llamante que se
+equivoque y pase texto plano no puede escribirlo en la base de datos. El mensaje
+de error no incluye el valor recibido, para no filtrarlo a los logs.
+
 ### Cómo se crea el primer administrador
 
 No existe contraseña por defecto. El único mecanismo soportado es:
@@ -249,6 +268,9 @@ Detalles que evitan bypass:
   Bearer, claves genéricas, cadenas de conexión con contraseña y asignaciones
   de contraseña en línea). **Nunca imprime el valor completo**: enmascara y
   muestra sólo el prefijo.
+- Analiza los archivos trackeados **más** los no trackeados que no estén
+  ignorados. Limitarlo a lo trackeado producía falsos negativos: un archivo
+  nuevo sin `git add` pasaba limpio en local y fallaba después en CI.
 - Ejecutable como `npm run secret:scan`, con `--staged` para usarlo en un hook
   pre-commit, y como job propio en CI.
 - Falsos positivos: comentario `secret-scan:allow` en la línea, auditable.
@@ -277,6 +299,7 @@ clave nueva.
 | `tests/ipc-session.test.js` | TEST 8, 9, 10, 11 + expiración, invalidación, frames anidados |
 | `tests/file-access-policy.test.js` | TEST 12, 13, 14 + inexistente, directorio, prefijo común |
 | `tests/source-invariants.test.js` | TEST 5, 6, 7, 15, 16 + IPC protegido, sin `123456`, sin secretos |
+| `tests/user-creation.test.js` | Alta atómica de usuario + credencial, y validación bcrypt en `setPasswordHash` |
 
 TEST 5 (usuario inactivo → DENY) está cubierto por la rama `USER_DISABLED` de
 `AuthService`, verificada estructuralmente; la validación funcional completa
@@ -285,6 +308,12 @@ requiere SQL Server (ver backlog P1: pruebas de integración).
 Los tests de invariantes **no** son de cobertura: detectan regresiones reales.
 Durante este sprint encontraron por sí solos los tres scripts que volcaban
 credenciales (hallazgo G), que no estaban en la lista de auditoría inicial.
+
+Las pruebas críticas se validaron por **mutación**: al desactivar el guardia
+bcrypt de `setPasswordHash` fallan 3 pruebas, y al mover el `INSERT` antes de la
+validación de contraseña fallan 2. Un test que sólo inspeccionara el texto
+fuente no habría detectado la primera mutación, por eso `setPasswordHash` se
+prueba de forma funcional interceptando `dbRun`.
 
 ---
 

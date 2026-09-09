@@ -79,7 +79,7 @@ test('una credencial legacy en texto plano no autentica aunque coincida', () => 
 // TEST 3: migracion legacy -> bcrypt, idempotente, conserva la contrasena.
 test('TEST 3: migra plaintext a bcrypt conservando la contrasena funcional', async () => {
   const store = makeStore([
-    { user_id: 'u1', password: 'password-original' },
+    { user_id: 'u1', password: 'password-original' }, // secret-scan:allow fixture sintetica
     { user_id: 'u2', password: hashPassword('ya-segura') },
     { user_id: 'u3', password: '' },
   ]);
@@ -116,8 +116,8 @@ test('TEST 3: migra plaintext a bcrypt conservando la contrasena funcional', asy
 
 test('la migracion contabiliza errores sin abortar el resto', async () => {
   const store = makeStore([
-    { user_id: 'ok', password: 'legacy-1' },
-    { user_id: 'roto', password: 'legacy-2' },
+    { user_id: 'ok', password: 'legacy-1' }, // secret-scan:allow fixture sintetica
+    { user_id: 'roto', password: 'legacy-2' }, // secret-scan:allow fixture sintetica
   ]);
   store.updateHash = async (userId, hash) => {
     if (userId === 'roto') throw new Error('fallo de escritura simulado');
@@ -132,7 +132,7 @@ test('la migracion contabiliza errores sin abortar el resto', async () => {
 });
 
 test('la migracion no filtra contrasenas ni hashes completos en los logs', async () => {
-  const secret = 'super-secreta-2026';
+  const secret = 'super-secreta-2026'; // secret-scan:allow fixture sintetica
   const store = makeStore([{ user_id: 'u1', password: secret }]);
 
   const logs = [];

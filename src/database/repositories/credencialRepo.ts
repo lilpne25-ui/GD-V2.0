@@ -6,7 +6,7 @@
 // el proceso de migracion pueden consumirlo.
 
 import { dbAll, dbGet, dbRun } from '../db';
-import { hashPassword } from '../../main/services/CredentialService';
+import { hashPassword, isBcryptHash } from '../../main/services/CredentialService';
 import type { CredentialStore, LegacyCredentialRow } from '../../main/services/CredentialService';
 
 interface CredencialRow {
@@ -35,8 +35,28 @@ export const CredencialRepo = {
     await this.setPasswordHash(userId, hashPassword(value));
   },
 
-  /** Escribe un hash ya calculado. Rechaza cualquier valor que no sea bcrypt. */
+  /**
+   * Escribe un hash ya calculado.
+   *
+   * Ultima linea de defensa antes de la base de datos: rechaza cualquier valor
+   * que no tenga formato bcrypt valido. Esto impide que texto plano llegue a
+   * usuario_credenciales aunque un llamante se equivoque y pase la contrasena
+   * sin hashear.
+   */
   async setPasswordHash(userId: string, hash: string): Promise<void> {
+    const id = String(userId ?? '').trim();
+    if (!id) {
+      throw new Error('user_id invalido al establecer la credencial.');
+    }
+
+    if (!isBcryptHash(hash)) {
+      // No se incluye el valor recibido en el mensaje: podria ser una
+      // contrasena en claro y acabaria en los logs.
+      throw new Error(
+        'Credencial rechazada: solo se admiten hashes bcrypt validos en usuario_credenciales.'
+      );
+    }
+
     await dbRun(
       `MERGE usuario_credenciales AS target
        USING (SELECT ? AS user_id, ? AS [password]) AS source

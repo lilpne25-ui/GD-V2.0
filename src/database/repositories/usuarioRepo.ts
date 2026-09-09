@@ -1,6 +1,7 @@
 import { dbAll, dbGet, dbRun, dbHasColumn, dbTableExists, generateId } from '../db';
 import type { RolUsuario } from '../../shared/types/common';
 import { CredencialRepo } from './credencialRepo';
+import { createUserWithCredential } from '../../main/services/CredentialService';
 
 export interface UsuarioRow {
   id: string;
@@ -130,28 +131,36 @@ export const UsuarioRepo = {
 
   async create(data: Partial<UsuarioRow>): Promise<string> {
     const id = generateId('usr');
-    await dbRun(
-      `INSERT INTO usuarios (id, nombre, email, rol, departamento, activo, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      [
-        id,
-        data.nombre || '',
-        data.email || '',
-        data.rol || 'operativo',
-        data.departamento || '',
-        data.activo ?? 1,
-      ]
+
+    // Fase 0.5: el alta es atomica. createUserWithCredential valida y hashea la
+    // contrasena ANTES de insertar el usuario, y elimina el usuario si la
+    // escritura de la credencial falla. Nunca queda un usuario sin credencial.
+    return await createUserWithCredential(
+      {
+        insertUser: async (userId: string) => {
+          await dbRun(
+            `INSERT INTO usuarios (id, nombre, email, rol, departamento, activo, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+            [
+              userId,
+              data.nombre || '',
+              data.email || '',
+              data.rol || 'operativo',
+              data.departamento || '',
+              data.activo ?? 1,
+            ]
+          );
+        },
+        setPasswordHash: async (userId: string, hash: string) => {
+          await CredencialRepo.setPasswordHash(userId, hash);
+        },
+        deleteUser: async (userId: string) => {
+          await dbRun('DELETE FROM usuarios WHERE id = ?', [userId]);
+        },
+      },
+      id,
+      (data as { password?: unknown }).password
     );
-
-    // Fase 0.5: la credencial se delega al repositorio de credenciales, que
-    // siempre almacena bcrypt. No existe contrasena por defecto.
-    const initialPassword = String((data as { password?: unknown }).password ?? '').trim();
-    if (!initialPassword) {
-      throw new Error('Debes proporcionar una contrasena inicial para el usuario.');
-    }
-    await CredencialRepo.setPassword(id, initialPassword);
-
-    return id;
   },
 
   async update(id: string, data: Partial<UsuarioRow>): Promise<void> {

@@ -65,6 +65,70 @@ export function maskSecret(value: unknown): string {
   return `${s.slice(0, 7)}...<${s.length} chars>`;
 }
 
+// --- Alta atomica de usuario + credencial ---------------------------------
+
+/**
+ * Operaciones que necesita createUserWithCredential.
+ * Se inyectan para poder probar el orden y el rollback sin base de datos.
+ */
+export interface UserCreationOps {
+  insertUser(userId: string): Promise<void>;
+  setPasswordHash(userId: string, hash: string): Promise<void>;
+  deleteUser(userId: string): Promise<void>;
+}
+
+/**
+ * Crea un usuario y su credencial sin dejar estado parcial.
+ *
+ * La capa de datos no expone transacciones, asi que la atomicidad se consigue
+ * combinando dos mecanismos:
+ *
+ *  1. Todo lo que puede fallar por datos de entrada ocurre ANTES de insertar:
+ *     se valida que la contrasena no este vacia y se calcula el hash. Si algo
+ *     falla aqui, no se ha creado ningun usuario.
+ *  2. Si la escritura de la credencial falla pese a todo, se elimina el usuario
+ *     recien insertado (rollback compensatorio) y se propaga el error original.
+ *
+ * Resultado: nunca queda un usuario sin credencial.
+ */
+export async function createUserWithCredential(
+  ops: UserCreationOps,
+  userId: string,
+  plainPassword: unknown
+): Promise<string> {
+  // --- Fase 1: validar y hashear ANTES de tocar la tabla usuarios ---
+  const value = String(plainPassword ?? '').trim();
+  if (!value) {
+    throw new Error('Debes proporcionar una contrasena inicial para el usuario.');
+  }
+
+  // Si hashPassword lanza, tampoco se ha insertado nada.
+  const hash = hashPassword(value);
+
+  // --- Fase 2: insertar el usuario ---
+  await ops.insertUser(userId);
+
+  // --- Fase 3: credencial, con rollback compensatorio ---
+  try {
+    await ops.setPasswordHash(userId, hash);
+  } catch (credentialError) {
+    try {
+      await ops.deleteUser(userId);
+    } catch {
+      // El rollback fallo: se prioriza informar del error original, pero se
+      // deja constancia de que puede haber quedado un usuario sin credencial.
+      // Un usuario sin credencial no puede iniciar sesion (fail-closed).
+      console.error(
+        `[createUserWithCredential] rollback fallido para user_id=${userId}: ` +
+          'puede haber quedado un usuario sin credencial.'
+      );
+    }
+    throw credentialError;
+  }
+
+  return userId;
+}
+
 // --- Migracion de credenciales legacy -------------------------------------
 
 export interface LegacyCredentialRow {
