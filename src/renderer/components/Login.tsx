@@ -1,28 +1,12 @@
 import React, { useState } from 'react';
-<<<<<<< HEAD
 import { useAuth, SessionUser } from '../context/AuthContext';
-=======
-import type { RolUsuario } from '../../shared/types/common';
-
-type SessionUser = {
-  id: string;
-  nombre: string;
-  email: string;
-  rol: RolUsuario;
-  departamento: string;
-  activo: number;
-};
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
 type LoginProps = {
   onLoginSuccess: (user: SessionUser) => void;
 };
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-<<<<<<< HEAD
   const { login, user } = useAuth();
-=======
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,18 +23,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     setLoading(true);
     try {
-<<<<<<< HEAD
       const success = await login(email.trim(), password);
       if (!success) {
-=======
-      const user = await (window as any).repo.call('UsuarioRepo', 'authenticate', email.trim(), password);
-      if (!user) {
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
         setError('Credenciales inválidas o usuario inactivo.');
         return;
       }
 
-<<<<<<< HEAD
       if (user) {
         onLoginSuccess(user);
       } else {
@@ -63,30 +41,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           departamento: ''
         });
       }
-=======
-      localStorage.setItem('sgc.currentRole', user.rol);
-      localStorage.setItem('sgc.currentUser', JSON.stringify({
-        id: user.id,
-        nombre: user.nombre,
-        email: user.email,
-        rol: user.rol,
-        departamento: user.departamento,
-        activo: user.activo === 1,
-      }));
-      localStorage.setItem('sgc.session', JSON.stringify({
-        usuario: {
-          id: user.id,
-          nombre: user.nombre,
-          email: user.email,
-          rol: user.rol,
-          departamento: user.departamento,
-        },
-        startedAt: new Date().toISOString(),
-      }));
-
-      window.dispatchEvent(new Event('storage'));
-      onLoginSuccess(user);
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     } catch (err) {
       console.error(err);
       setError('No se pudo iniciar sesión.');

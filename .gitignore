@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -35,7 +34,6 @@ out/
 # Database files
 *.db
 *.sqlite
-backups/
 
 # System or temporary files
 reports/phase-00-baseline.md
@@ -44,16 +42,13 @@ reports/phase-09-post-cutover.md
 scripts/smoke-test-auth-ipc.js
 scripts/020a_dry_run_passwords.js
 scripts/020b_migrate_passwords.js
-=======
-node_modules/
-dist/
+
+# Backups: ignorar todo salvo el snapshot pre-cutover versionado
 backups/*
 !backups/20260303-101847/
 !backups/20260303-101847/SGC_Dev_precutover.bak
 !backups/20260303-101847/sgc_precutover.db
-.env
+
+# Otros temporales
 .tmp_*
-*.log
-.DS_Store
 Thumbs.db
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6

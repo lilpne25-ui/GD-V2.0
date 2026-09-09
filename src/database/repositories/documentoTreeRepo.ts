@@ -81,8 +81,6 @@ interface DocumentoOfficePreview {
   html: string;
 }
 
-<<<<<<< HEAD
-=======
 interface DocumentoDownloadPayload {
   fileName: string;
   mimeType: string;
@@ -90,7 +88,6 @@ interface DocumentoDownloadPayload {
   sizeBytes: number;
 }
 
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 export interface DocumentoAuditRow {
   id: string;
   event_type: 'add_document' | 'add_folder' | 'delete_node' | 'rename_node' | 'move_node';
@@ -943,8 +940,6 @@ export const DocumentoTreeRepo = {
     );
   },
 
-<<<<<<< HEAD
-=======
   async getFileDownloadPayload(nodeId: string, actorRole?: RolUsuario): Promise<DocumentoDownloadPayload> {
     void actorRole;
     const node = await DocumentoTreeRepo.getById(nodeId);
@@ -964,7 +959,6 @@ export const DocumentoTreeRepo = {
     };
   },
 
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
   async listSignatures(nodeId: string, actorRole?: RolUsuario): Promise<DocumentoFirmaRow[]> {
     void actorRole;
     return dbAll<DocumentoFirmaRow>(

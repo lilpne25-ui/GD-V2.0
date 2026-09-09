@@ -5,12 +5,9 @@ import Dashboard from './components/Dashboard';
 import EmptyState from './components/EmptyState';
 import ToastProvider from './components/Toast';
 import SgcIcon from './components/SgcIcon';
-<<<<<<< HEAD
 import { AuthProvider, useAuth, SessionUser } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
-=======
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 import './styles/global.css';
 import './components/Sidebar.css';
 import './components/Dashboard.css';
@@ -30,20 +27,6 @@ const ControlCambios = React.lazy(() => import('./modules/control-cambios/Contro
 const Usuarios = React.lazy(() => import('./modules/usuarios/Usuarios'));
 const Registros = React.lazy(() => import('./modules/registros/Registros'));
 
-<<<<<<< HEAD
-=======
-// TODO: Revertir cuando se reactive el flujo real de autenticacion.
-const DISABLE_LOGIN_FOR_NOW = true;
-
-type SessionUser = {
-  id: string;
-  nombre: string;
-  email: string;
-  rol: string;
-  departamento: string;
-};
-
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 type NotificacionUI = {
   id: string;
   user_id: string;
@@ -127,54 +110,6 @@ const NOTI_ICON_MAP: Record<string, import('./components/SgcIcon').SgcIconName> 
   email: 'email',
 };
 
-<<<<<<< HEAD
-=======
-const DEV_SESSION_USER: SessionUser = {
-  id: 'dev-user',
-  nombre: 'Modo demo',
-  email: 'demo@local',
-  rol: 'ADMIN',
-  departamento: 'Sistemas',
-};
-
-const writeSessionUser = (user: SessionUser) => {
-  localStorage.setItem('sgc.currentRole', user.rol);
-  localStorage.setItem('sgc.currentUser', JSON.stringify({
-    id: user.id,
-    nombre: user.nombre,
-    email: user.email,
-    rol: user.rol,
-    departamento: user.departamento,
-    activo: true,
-  }));
-  localStorage.setItem('sgc.session', JSON.stringify({
-    usuario: {
-      id: user.id,
-      nombre: user.nombre,
-      email: user.email,
-      rol: user.rol,
-      departamento: user.departamento,
-    },
-    startedAt: new Date().toISOString(),
-    mode: 'dev-bypass',
-  }));
-  window.dispatchEvent(new Event('storage'));
-};
-
-const readSessionUser = (): SessionUser | null => {
-  const raw = localStorage.getItem('sgc.session');
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    const user = parsed?.usuario;
-    if (!user?.id || !user?.rol) return null;
-    return user as SessionUser;
-  } catch {
-    return null;
-  }
-};
-
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 const renderSection = (section: string) => {
   switch (section) {
     case 'documentacion': return <Documentacion />;
@@ -215,22 +150,15 @@ const playNotificationSound = (() => {
   };
 })();
 
-<<<<<<< HEAD
 const AppContent: React.FC = () => {
   const { user, authenticated, logout } = useAuth();
   const [section, setSection] = React.useState('dashboard');
-=======
-const App: React.FC = () => {
-  const [section, setSection] = React.useState('dashboard');
-  const [sessionUser, setSessionUser] = React.useState<SessionUser | null>(() => readSessionUser());
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
   const [notifications, setNotifications] = React.useState<NotificacionUI[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [showNotiPanel, setShowNotiPanel] = React.useState(false);
   const notiPanelRef = React.useRef<HTMLDivElement>(null);
   const prevUnreadRef = React.useRef<number>(0);
 
-<<<<<<< HEAD
   const effectiveUser = user!;
   const currentSection = SECTION_INFO[section] ?? SECTION_INFO.dashboard;
   const userInitials = effectiveUser?.nombre
@@ -242,33 +170,6 @@ const App: React.FC = () => {
         .join('')
     : 'SG';
 
-=======
-  React.useEffect(() => {
-    if (!DISABLE_LOGIN_FOR_NOW) return;
-    if (sessionUser) return;
-    writeSessionUser(DEV_SESSION_USER);
-    setSessionUser(DEV_SESSION_USER);
-  }, [sessionUser]);
-
-  React.useEffect(() => {
-    const syncSession = () => setSessionUser(readSessionUser());
-    window.addEventListener('storage', syncSession);
-    window.addEventListener('focus', syncSession);
-    return () => {
-      window.removeEventListener('storage', syncSession);
-      window.removeEventListener('focus', syncSession);
-    };
-  }, []);
-
-  const effectiveUser = sessionUser ?? DEV_SESSION_USER;
-  const currentSection = SECTION_INFO[section] ?? SECTION_INFO.dashboard;
-  const userInitials = effectiveUser.nombre
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase() || '')
-    .join('');
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
   const loadNotifications = React.useCallback(async () => {
     if (!effectiveUser?.id) return;
@@ -353,23 +254,14 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-<<<<<<< HEAD
     void logout();
     setSection('dashboard');
-=======
-    localStorage.removeItem('sgc.session');
-    localStorage.removeItem('sgc.currentUser');
-    localStorage.removeItem('sgc.currentRole');
-    setSection('dashboard');
-    setSessionUser(null);
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
   };
 
   const notiTypeIcon = (tipo: string): import('./components/SgcIcon').SgcIconName => {
     return NOTI_ICON_MAP[tipo] || 'info';
   };
 
-<<<<<<< HEAD
   if (!authenticated) {
     return (
       <PublicOnlyRoute>
@@ -472,103 +364,8 @@ const App: React.FC = () => {
     <AuthProvider>
       <AppContent />
     </AuthProvider>
-=======
-  if (!DISABLE_LOGIN_FOR_NOW && !sessionUser) {
-    return <Login onLoginSuccess={() => setSessionUser(readSessionUser())} />;
-  }
-
-  return (
-    <div className="app-layout">
-      <a href="#main-content" className="skip-link">Saltar al contenido principal</a>
-      <Sidebar active={section} onSelect={setSection} />
-      <div className="app-main">
-        <header className="app-topbar">
-          <div className="app-context">
-            <h1 className="app-context-title">{currentSection.title}</h1>
-          </div>
-
-          <div className="app-topbar-actions">
-            <div className="app-user-chip" aria-label={`Sesión activa de ${effectiveUser.nombre}`}>
-              <span className="app-user-avatar">{userInitials || 'SG'}</span>
-              <div className="app-user-meta">
-                <strong>{effectiveUser.nombre}</strong>
-                <span>{effectiveUser.rol}</span>
-              </div>
-            </div>
-
-            <div className="noti-bell-wrap" ref={notiPanelRef}>
-              <button
-                type="button"
-                className="noti-bell-btn"
-                title="Notificaciones"
-                aria-label="Abrir centro de notificaciones"
-                aria-haspopup="dialog"
-                aria-expanded={showNotiPanel ? "true" : "false"}
-                onClick={() => setShowNotiPanel(prev => !prev)}
-              >
-                <SgcIcon name="bell" size="md" className="noti-bell-icon" />
-                {unreadCount > 0 && <span className="noti-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-              </button>
-
-              {showNotiPanel && (
-                <div className="noti-panel" role="dialog" aria-label="Centro de notificaciones">
-                  <div className="noti-panel-header">
-                    <div className="noti-panel-title-wrap">
-                      <strong>Notificaciones</strong>
-                      <span>{unreadCount > 0 ? `${unreadCount} por revisar` : 'Todo al dia'}</span>
-                    </div>
-                    {unreadCount > 0 && (
-                      <button type="button" className="btn btn-sm btn-secondary" onClick={() => void markAllRead()}>
-                        Marcar todas como leidas
-                      </button>
-                    )}
-                  </div>
-                  <div className="noti-panel-list">
-                    {notifications.length === 0 ? (
-                      <EmptyState icon="bell" title="Sin notificaciones" description="Estás al día." compact />
-                    ) : notifications.map(notification => (
-                      <button
-                        key={notification.id}
-                        type="button"
-                        className={`noti-item ${notification.leida === 0 ? 'noti-item--unread' : ''}`}
-                        onClick={() => { void openDocumentFromNotification(notification); }}
-                      >
-                        <span className="noti-icon">
-                          <SgcIcon name={notiTypeIcon(notification.tipo)} size="md" />
-                        </span>
-                        <div className="noti-body">
-                          <div className="noti-title">{notification.titulo}</div>
-                          <div className="noti-msg">{notification.mensaje}</div>
-                          <div className="noti-time">{new Date(notification.created_at).toLocaleString('es-MX')}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {!DISABLE_LOGIN_FOR_NOW && (
-              <button type="button" className="btn btn-secondary" onClick={handleLogout}>
-                Cerrar sesión
-              </button>
-            )}
-          </div>
-        </header>
-        <div id="main-content" className="app-content" role="main">
-          <React.Suspense fallback={<div style={{ padding: '12px 4px', color: '#64748b' }}>Cargando módulo...</div>}>
-            {renderSection(section)}
-          </React.Suspense>
-        </div>
-      </div>
-      <ToastProvider />
-    </div>
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
   );
 };
 
 export default App;
-<<<<<<< HEAD
 
-=======
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6

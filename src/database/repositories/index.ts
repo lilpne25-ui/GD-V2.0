@@ -15,8 +15,5 @@ export { ControlCambiosRepo } from './controlCambiosRepo';
 export { WorkflowRepo } from './workflowRepo';
 export { NotificacionRepo } from './notificacionRepo';
 export { CorreoRepo } from './correoRepo';
-<<<<<<< HEAD
-=======
 export { RegistroDinamicoRepo } from './registroDinamicoRepo';
 export { ReportesRepo } from './reportesRepo';
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6

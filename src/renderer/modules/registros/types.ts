@@ -37,11 +37,7 @@ export type WfCorreccion = {
   created_at: string;
 };
 
-<<<<<<< HEAD
-export type RegistrosMainTab = 'studio' | 'workflow';
-=======
 export type RegistrosMainTab = 'studio' | 'workflow' | 'dynamic';
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
 
 export type FolderOption = {
   id: string;

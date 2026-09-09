@@ -66,7 +66,6 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     setLoadError('');
     try {
-<<<<<<< HEAD
       const metrics = await (window as any).dashboard.getMetrics();
 
       setDocumentos(Number(metrics.documentos || 0));
@@ -74,25 +73,6 @@ const Dashboard: React.FC = () => {
       setPendientesRevision(Number(metrics.pendientesRevision || 0));
       setUsuariosActivos(Number(metrics.usuariosActivos || 0));
       setAuditTrail(Array.isArray(metrics.auditTrail) ? metrics.auditTrail : []);
-=======
-      const [nodes, pending, users, audit] = await Promise.all([
-        (window as any).repo.call('DocumentoTreeRepo', 'getAll') as Promise<DocumentoNodoUI[]>,
-        (window as any).repo.call('WorkflowRepo', 'countPending') as Promise<number>,
-        (window as any).repo.call('UsuarioRepo', 'getAll') as Promise<UsuarioUI[]>,
-        (window as any).repo.call('DocumentoTreeRepo', 'listAuditTrail', 120) as Promise<DocumentoAuditRowUI[]>,
-      ]);
-
-      const safeNodes = Array.isArray(nodes) ? nodes : [];
-      const fileCount = safeNodes.filter(node => node.node_type === 'file').length;
-      const folderCount = safeNodes.filter(node => node.node_type === 'folder').length;
-      const activeUsers = (Array.isArray(users) ? users : []).filter(user => toFlag01(user?.activo, 1) === 1).length;
-
-      setDocumentos(fileCount);
-      setCarpetas(folderCount);
-      setPendientesRevision(Number(pending || 0));
-      setUsuariosActivos(activeUsers);
-      setAuditTrail(Array.isArray(audit) ? audit : []);
->>>>>>> 52478ff5213d364e7cba58ad09ef449a955b27a6
     } catch (error) {
       console.error(error);
       setLoadError('No se pudo cargar la informacion del dashboard.');
