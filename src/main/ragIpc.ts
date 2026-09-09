@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron';
+import { withAuth } from './ipc/authMiddleware';
 import { RagRepo } from '../database/repositories/ragRepo';
 import type {
   AnalyzeRagRecordInput,
@@ -361,16 +362,16 @@ export function registerRagIpcHandlers(options: RegisterRagIpcHandlersOptions): 
     return new Error(`[${channel}] ${String(error || 'Error inesperado RAG.')}`);
   });
 
-  ipcMain.handle('rag:get-status', async () => {
+  ipcMain.handle('rag:get-status', withAuth(async () => {
     await options.ensureStartupTasks();
     try {
       return await getRagStatus();
     } catch (error) {
       throw normalizeError('rag:get-status', error);
     }
-  });
+  }));
 
-  ipcMain.handle('rag:ingest-document-node', async (_event, payload: unknown) => {
+  ipcMain.handle('rag:ingest-document-node', withAuth(async (_event, payload: unknown) => {
     await options.ensureStartupTasks();
     try {
       assertRagEnabled('rag:ingest-document-node');
@@ -378,9 +379,9 @@ export function registerRagIpcHandlers(options: RegisterRagIpcHandlersOptions): 
     } catch (error) {
       throw normalizeError('rag:ingest-document-node', error);
     }
-  });
+  }));
 
-  ipcMain.handle('rag:analyze-record', async (_event, payload: unknown) => {
+  ipcMain.handle('rag:analyze-record', withAuth(async (_event, payload: unknown) => {
     await options.ensureStartupTasks();
     try {
       assertRagEnabled('rag:analyze-record');
@@ -388,9 +389,9 @@ export function registerRagIpcHandlers(options: RegisterRagIpcHandlersOptions): 
     } catch (error) {
       throw normalizeError('rag:analyze-record', error);
     }
-  });
+  }));
 
-  ipcMain.handle('rag:get-answer', async (_event, payload: unknown) => {
+  ipcMain.handle('rag:get-answer', withAuth(async (_event, payload: unknown) => {
     await options.ensureStartupTasks();
     try {
       const input = validateGetAnswerPayload(payload);
@@ -399,23 +400,23 @@ export function registerRagIpcHandlers(options: RegisterRagIpcHandlersOptions): 
     } catch (error) {
       throw normalizeError('rag:get-answer', error);
     }
-  });
+  }));
 
-  ipcMain.handle('rag:submit-feedback', async (_event, payload: unknown) => {
+  ipcMain.handle('rag:submit-feedback', withAuth(async (_event, payload: unknown) => {
     await options.ensureStartupTasks();
     try {
       return await RagRepo.submitFeedback(validateFeedbackPayload(payload));
     } catch (error) {
       throw normalizeError('rag:submit-feedback', error);
     }
-  });
+  }));
 
-  ipcMain.handle('rag:get-evidence', async (_event, payload: unknown) => {
+  ipcMain.handle('rag:get-evidence', withAuth(async (_event, payload: unknown) => {
     await options.ensureStartupTasks();
     try {
       return await getEvidence(validateGetEvidencePayload(payload));
     } catch (error) {
       throw normalizeError('rag:get-evidence', error);
     }
-  });
+  }));
 }

@@ -1,5 +1,6 @@
 // Punto de entrada principal del proceso Electron
 import { app, BrowserWindow, globalShortcut, ipcMain, shell } from 'electron';
+import type { IpcMainInvokeEvent } from 'electron';
 
 // Deshabilitar aceleración por hardware para evitar fallos del proceso GPU en Windows
 app.disableHardwareAcceleration();
@@ -12,6 +13,8 @@ import { runMigrations } from '../database/db';
 import { registerAuthIpc } from './ipc/authIpc';
 import { withAuth } from './ipc/authMiddleware';
 import { registerDashboardIpc } from './ipc/dashboardIpc';
+import { assertReadablePath } from './services/FileAccessPolicy';
+import { SessionManager } from './services/SessionManager';
 import { registerRagIpcHandlers } from './ragIpc';
 import type {
   CreateRecordInput,
@@ -145,6 +148,30 @@ function normalizeIpcError(channel: string, error: unknown): Error {
   }
   const fallback = String(error || 'Error inesperado en la operación de records.');
   return new Error(`[${channel}] ${fallback}`);
+}
+
+/**
+ * Fase 0.5 - La identidad del actor NUNCA proviene del payload del renderer.
+ * Se deriva de la sesion activa asociada al webContents emisor y sobreescribe
+ * cualquier userId/rol que el renderer haya enviado (p.ej. desde localStorage).
+ * withAuth ya garantizo que la sesion existe y no ha expirado.
+ */
+function withSessionActor(event: IpcMainInvokeEvent, payload: unknown): Record<string, unknown> {
+  const session = SessionManager.getInstance().getSession(event.sender.id);
+  if (!session) {
+    throw new Error('Unauthorized: Session not found or expired.');
+  }
+
+  const base = isObjectLike(payload) ? { ...payload } : {};
+
+  // Campos de identidad controlados por el backend.
+  base.role = session.role;
+  base.userId = session.userId;
+  base.createdBy = session.userId;
+  base.updatedBy = session.userId;
+  base.performedBy = session.userId;
+
+  return base;
 }
 
 function validateCreateRecordPayload(payload: unknown): CreateRecordInput {
@@ -531,11 +558,16 @@ function createWindow() {
   });
 }
 
-const ALLOWED_GENERIC_METHODS = ['getAll', 'getById', 'create', 'update', 'delete', 'listAll', 'count', 'list'];
+// Fase 0.5 - 'delete' se retira del conjunto generico: cada repositorio que
+// necesite borrado debe declararlo explicitamente y de forma justificada.
+const ALLOWED_GENERIC_METHODS = ['getAll', 'getById', 'create', 'update', 'listAll', 'count', 'list'];
 
 const ALLOWLIST: Record<string, string[]> = {
   DocumentoTreeRepo: [
     ...ALLOWED_GENERIC_METHODS,
+    // Excepcion documentada: el modulo Documentacion gestiona papelera y borrado
+    // de nodos. El borrado sigue sujeto a sesion activa via withAuth.
+    'delete',
     'clearSignatures', 'getTree', 'getAncestors', 'listTrash', 'restoreTrash', 'purgeTrash',
     // Superficie realmente usada por el modulo de documentacion
     'createFile', 'createFileFromPath', 'createFolder', 'deleteNode', 'deleteTrashItem',
@@ -616,30 +648,30 @@ function registerIpcHandlers() {
     return await fn.apply(repoModule, finalArgs);
   }));
 
-  ipcMain.handle('records:create', async (_event, payload: unknown) => {
+  ipcMain.handle('records:create', withAuth(async (event, payload: unknown) => {
     await ensureStartupTasks();
     try {
-      const input = validateCreateRecordPayload(payload);
+      const input = validateCreateRecordPayload(withSessionActor(event, payload));
       const repo = await getRegistroDinamicoRepo();
       return await repo.createRecordInstance(input);
     } catch (error) {
       throw normalizeIpcError('records:create', error);
     }
-  });
+  }));
 
-  ipcMain.handle('records:update', async (_event, payload: unknown) => {
+  ipcMain.handle('records:update', withAuth(async (event, payload: unknown) => {
     await ensureStartupTasks();
     try {
-      const input = validateUpdateRecordPayload(payload);
+      const input = validateUpdateRecordPayload(withSessionActor(event, payload));
       const repo = await getRegistroDinamicoRepo();
       await repo.updateRecordInstanceDraft(input);
       return true;
     } catch (error) {
       throw normalizeIpcError('records:update', error);
     }
-  });
+  }));
 
-  ipcMain.handle('records:get-by-type', async (_event, payload: unknown) => {
+  ipcMain.handle('records:get-by-type', withAuth(async (_event, payload: unknown) => {
     await ensureStartupTasks();
     try {
       const input = validateGetByTypePayload(payload);
@@ -648,9 +680,9 @@ function registerIpcHandlers() {
     } catch (error) {
       throw normalizeIpcError('records:get-by-type', error);
     }
-  });
+  }));
 
-  ipcMain.handle('records:get-definition', async (_event, payload: unknown) => {
+  ipcMain.handle('records:get-definition', withAuth(async (_event, payload: unknown) => {
     await ensureStartupTasks();
     try {
       const input = validateGetDefinitionPayload(payload);
@@ -664,20 +696,20 @@ function registerIpcHandlers() {
     } catch (error) {
       throw normalizeIpcError('records:get-definition', error);
     }
-  });
+  }));
 
-  ipcMain.handle('records:get-transitions', async (_event, payload: unknown) => {
+  ipcMain.handle('records:get-transitions', withAuth(async (event, payload: unknown) => {
     await ensureStartupTasks();
     try {
-      const input = validateGetTransitionsPayload(payload);
+      const input = validateGetTransitionsPayload(withSessionActor(event, payload));
       const repo = await getRegistroDinamicoRepo();
       return await repo.getAvailableTransitions(input);
     } catch (error) {
       throw normalizeIpcError('records:get-transitions', error);
     }
-  });
+  }));
 
-  ipcMain.handle('records:get-audit-history', async (_event, payload: unknown) => {
+  ipcMain.handle('records:get-audit-history', withAuth(async (_event, payload: unknown) => {
     await ensureStartupTasks();
     try {
       const input = validateGetAuditHistoryPayload(payload);
@@ -686,19 +718,19 @@ function registerIpcHandlers() {
     } catch (error) {
       throw normalizeIpcError('records:get-audit-history', error);
     }
-  });
+  }));
 
-  ipcMain.handle('records:transition', async (_event, payload: unknown) => {
+  ipcMain.handle('records:transition', withAuth(async (event, payload: unknown) => {
     await ensureStartupTasks();
     try {
-      const input = validateTransitionPayload(payload);
+      const input = validateTransitionPayload(withSessionActor(event, payload));
       const repo = await getRegistroDinamicoRepo();
       await repo.transitionRecordState(input);
       return true;
     } catch (error) {
       throw normalizeIpcError('records:transition', error);
     }
-  });
+  }));
 
   ipcMain.handle('window:set-content-protection', (event, enabled: boolean) => {
     const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
@@ -711,24 +743,23 @@ function registerIpcHandlers() {
 
   ipcMain.handle('window:get-content-protection', () => contentProtectionEnabled);
 
-  ipcMain.handle('window:open-path', async (_event, filePath: string) => {
-    if (!filePath || typeof filePath !== 'string') return false;
-    const result = await shell.openPath(filePath);
+  ipcMain.handle('window:open-path', withAuth(async (_event, filePath: string) => {
+    const safePath = assertReadablePath(filePath);
+    const result = await shell.openPath(safePath);
     return result === '';
-  });
+  }));
 
-  ipcMain.handle('window:read-file-data-url', async (_event, filePath: string, mimeType?: string) => {
+  ipcMain.handle('window:read-file-data-url', withAuth(async (_event, filePath: string, mimeType?: string) => {
     try {
-      if (!filePath || typeof filePath !== 'string') return null;
-      const stat = await fs.promises.stat(filePath);
-      if (!stat.isFile()) return null;
+      const safePath = assertReadablePath(filePath);
+      const stat = await fs.promises.stat(safePath);
 
       // Límite de seguridad para evitar colapso por memoria al previsualizar.
       if (stat.size > previewMaxDataUrlBytes) {
         throw new Error('El archivo es demasiado grande para visualización interna segura.');
       }
 
-      const buffer = await fs.promises.readFile(filePath);
+      const buffer = await fs.promises.readFile(safePath);
       const safeMime = typeof mimeType === 'string' && mimeType.trim()
         ? mimeType.trim()
         : 'application/octet-stream';
@@ -736,24 +767,23 @@ function registerIpcHandlers() {
     } catch (error: any) {
       throw new Error(error?.message || 'No se pudo leer el archivo local para el visor interno.');
     }
-  });
+  }));
 
-  ipcMain.handle('window:read-file-buffer', async (_event, filePath: string) => {
+  ipcMain.handle('window:read-file-buffer', withAuth(async (_event, filePath: string) => {
     try {
-      if (!filePath || typeof filePath !== 'string') return null;
-      const stat = await fs.promises.stat(filePath);
-      if (!stat.isFile()) return null;
+      const safePath = assertReadablePath(filePath);
+      const stat = await fs.promises.stat(safePath);
 
       if (stat.size > previewMaxBufferBytes) {
         throw new Error('El archivo es demasiado grande para visualización interna segura.');
       }
 
-      const buffer = await fs.promises.readFile(filePath);
+      const buffer = await fs.promises.readFile(safePath);
       return Uint8Array.from(buffer);
     } catch (error: any) {
       throw new Error(error?.message || 'No se pudo leer el archivo local para el visor interno.');
     }
-  });
+  }));
 }
 
 app.whenReady().then(() => {

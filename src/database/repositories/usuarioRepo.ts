@@ -1,5 +1,6 @@
 import { dbAll, dbGet, dbRun, dbHasColumn, dbTableExists, generateId } from '../db';
 import type { RolUsuario } from '../../shared/types/common';
+import { CredencialRepo } from './credencialRepo';
 
 export interface UsuarioRow {
   id: string;
@@ -10,7 +11,6 @@ export interface UsuarioRow {
   activo: number;
   created_at: string;
   updated_at: string;
-  password: string;
 }
 
 export interface UsuarioAuth {
@@ -74,10 +74,8 @@ export const UsuarioRepo = {
   async getByLogin(login: string): Promise<UsuarioRow | null> {
     const cleanLogin = String(login || '').trim();
     const user = await dbGet<UsuarioRow>(
-      `SELECT u.id, u.nombre, u.email, u.rol, u.departamento, u.activo, u.created_at, u.updated_at,
-              COALESCE(uc.password, '') AS password
+      `SELECT u.id, u.nombre, u.email, u.rol, u.departamento, u.activo, u.created_at, u.updated_at
        FROM usuarios u
-       LEFT JOIN usuario_credenciales uc ON uc.user_id = u.id
        WHERE lower(trim(u.email)) = lower(?)
           OR lower(trim(u.nombre)) = lower(?)
           OR lower(trim(u.id)) = lower(?)
@@ -115,20 +113,16 @@ export const UsuarioRepo = {
 
   async getAll(): Promise<UsuarioRow[]> {
     return dbAll<UsuarioRow>(
-      `SELECT u.id, u.nombre, u.email, u.rol, u.departamento, u.activo, u.created_at, u.updated_at,
-              COALESCE(uc.password, '') AS password
+      `SELECT u.id, u.nombre, u.email, u.rol, u.departamento, u.activo, u.created_at, u.updated_at
        FROM usuarios u
-       LEFT JOIN usuario_credenciales uc ON uc.user_id = u.id
        ORDER BY u.nombre COLLATE NOCASE ASC`
     );
   },
 
   async getById(id: string): Promise<UsuarioRow | undefined> {
     return dbGet<UsuarioRow>(
-      `SELECT u.id, u.nombre, u.email, u.rol, u.departamento, u.activo, u.created_at, u.updated_at,
-              COALESCE(uc.password, '') AS password
+      `SELECT u.id, u.nombre, u.email, u.rol, u.departamento, u.activo, u.created_at, u.updated_at
        FROM usuarios u
-       LEFT JOIN usuario_credenciales uc ON uc.user_id = u.id
        WHERE u.id = ?`,
       [id]
     );
@@ -149,17 +143,13 @@ export const UsuarioRepo = {
       ]
     );
 
-    await dbRun(
-      `MERGE usuario_credenciales AS target
-       USING (SELECT ? AS user_id, ? AS [password]) AS source
-          ON target.user_id = source.user_id
-       WHEN MATCHED THEN
-         UPDATE SET [password] = source.[password], updated_at = SYSDATETIME()
-       WHEN NOT MATCHED THEN
-         INSERT (user_id, [password], updated_at)
-         VALUES (source.user_id, source.[password], SYSDATETIME());`,
-      [id, data.password || '123456']
-    );
+    // Fase 0.5: la credencial se delega al repositorio de credenciales, que
+    // siempre almacena bcrypt. No existe contrasena por defecto.
+    const initialPassword = String((data as { password?: unknown }).password ?? '').trim();
+    if (!initialPassword) {
+      throw new Error('Debes proporcionar una contrasena inicial para el usuario.');
+    }
+    await CredencialRepo.setPassword(id, initialPassword);
 
     return id;
   },
@@ -181,21 +171,13 @@ export const UsuarioRepo = {
   },
 
   async delete(id: string): Promise<void> {
+    await CredencialRepo.deleteByUserId(id);
     await dbRun('DELETE FROM usuarios WHERE id = ?', [id]);
   },
 
   async setPassword(id: string, password: string): Promise<void> {
-    await dbRun(
-      `MERGE usuario_credenciales AS target
-       USING (SELECT ? AS user_id, ? AS [password]) AS source
-          ON target.user_id = source.user_id
-       WHEN MATCHED THEN
-         UPDATE SET [password] = source.[password], updated_at = SYSDATETIME()
-       WHEN NOT MATCHED THEN
-         INSERT (user_id, [password], updated_at)
-         VALUES (source.user_id, source.[password], SYSDATETIME());`,
-      [id, password]
-    );
+    // Siempre bcrypt. Nunca texto plano.
+    await CredencialRepo.setPassword(id, password);
   },
 
   async getDocumentPermissions(userId: string): Promise<UsuarioDocumentoPermisos> {

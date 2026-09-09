@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # CODE BUILD: typecheck, pruebas de seguridad/auth y compilacion de bundles.
+  # Este job es el que determina si el codigo es correcto.
+  # ---------------------------------------------------------------------------
+  code-build:
+    name: Code build (typecheck + tests + webpack)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Security & auth tests
+        run: npm test
+
+      - name: Build renderer bundle
+        run: npx webpack --config webpack.renderer.js --mode production
+
+      - name: Build main bundle
+        run: npx webpack --config webpack.main.js --mode production
+
+  # ---------------------------------------------------------------------------
+  # SECRET SCAN: impide que entren secretos nuevos al repositorio.
+  # ---------------------------------------------------------------------------
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Scan tracked files for secrets
+        run: node scripts/secret-scan.js
+
+  # ---------------------------------------------------------------------------
+  # INSTALLER PACKAGING: separado a proposito del CODE BUILD.
+  #
+  # electron-builder falla en Windows al extraer la cache winCodeSign porque
+  # necesita privilegio para crear enlaces simbolicos (.dylib de macOS). Es un
+  # problema de entorno, NO del codigo. Por eso el empaquetado no bloquea el CI.
+  # Ver docs/security/AUTH_HARDENING_0_5.md, seccion "Empaquetado".
+  # ---------------------------------------------------------------------------
+  installer-packaging:
+    name: Installer packaging (no bloqueante)
+    runs-on: windows-latest
+    needs: code-build
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Package installer
+        run: npm run build

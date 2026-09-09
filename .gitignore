@@ -11,6 +11,7 @@ jspm_packages/
 
 # Compiler outputs
 dist/
+dist-test/
 build/
 out/
 

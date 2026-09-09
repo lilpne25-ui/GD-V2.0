@@ -11,8 +11,12 @@ type UsuarioUI = {
   rol: RolUsuario;
   departamento: string;
   activo: number;
-  password: string;
 };
+
+// Fase 0.5: la contrasena existe unicamente como campo de escritura del
+// formulario de alta. El modelo publico UsuarioUI no la contiene y el backend
+// jamas la devuelve.
+type UsuarioFormUI = Omit<UsuarioUI, 'id'> & EmailPermUI & { password: string };
 
 type EmailPermUI = {
   can_send_email: number;
@@ -114,14 +118,14 @@ function toFlag01(value: unknown, fallback: number = 0): number {
   return fallback ? 1 : 0;
 }
 
-function getDefaultForm(): Omit<UsuarioUI, 'id'> & EmailPermUI {
+function getDefaultForm(): UsuarioFormUI {
   return {
     nombre: PUESTO_NOMBRE_CATALOG[0]?.nombre || '',
     email: '',
     rol: PUESTO_NOMBRE_CATALOG[0]?.puesto || '',
     departamento: '',
     activo: 1,
-    password: '123456',
+    password: '',
     can_send_email: 0,
     can_receive_email: 1,
     smtp_host: '',
@@ -139,7 +143,7 @@ function getDefaultForm(): Omit<UsuarioUI, 'id'> & EmailPermUI {
   };
 }
 
-const emptyForm: Omit<UsuarioUI, 'id'> & EmailPermUI = getDefaultForm();
+const emptyForm: UsuarioFormUI = getDefaultForm();
 
 const USERS_ICON_PATHS: Record<UsersIconName, string> = {
   plus: 'M12 5v14M5 12h14',
@@ -175,10 +179,9 @@ const Usuarios: React.FC = () => {
   const [usuarios, setUsuarios] = useState<UsuarioUI[]>([]);
   const [selected, setSelected] = useState<UsuarioUI | null>(null);
   const [view, setView] = useState<ViewMode>('list');
-  const [form, setForm] = useState<Omit<UsuarioUI, 'id'> & EmailPermUI>(emptyForm);
+  const [form, setForm] = useState<UsuarioFormUI>(emptyForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPasswordFor, setShowPasswordFor] = useState<string | null>(null);
   const [passwordDialogUser, setPasswordDialogUser] = useState<UsuarioUI | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [documentPerms, setDocumentPerms] = useState<DocumentoPermisosUI | null>(null);
@@ -317,12 +320,14 @@ const Usuarios: React.FC = () => {
     } catch { /* ignore */ }
     setSmtpTestResult(null);
     setForm({
+      // La edicion nunca precarga credenciales: el cambio de contrasena tiene
+      // su propio dialogo y pasa por UsuarioRepo.setPassword (bcrypt).
+      password: '',
       nombre: user.nombre,
       email: user.email,
       rol: user.rol,
       departamento: user.departamento,
       activo: user.activo,
-      password: user.password,
       ...emailPerm,
     });
     setSelected(user);
@@ -407,7 +412,7 @@ const Usuarios: React.FC = () => {
 
   const openPasswordDialog = (user: UsuarioUI) => {
     setPasswordDialogUser(user);
-    setNewPassword(user.password || '');
+    setNewPassword('');
   };
 
   const savePassword = async () => {
@@ -428,30 +433,6 @@ const Usuarios: React.FC = () => {
     }
   };
 
-  const activateSession = (user: UsuarioUI) => {
-    localStorage.setItem('sgc.currentRole', user.rol);
-    localStorage.setItem('sgc.currentUser', JSON.stringify({
-      id: user.id,
-      nombre: user.nombre,
-      email: user.email,
-      rol: user.rol,
-      departamento: user.departamento,
-      activo: user.activo === 1,
-    }));
-    localStorage.setItem('sgc.session', JSON.stringify({
-      usuario: {
-        id: user.id,
-        nombre: user.nombre,
-        email: user.email,
-        rol: user.rol,
-        departamento: user.departamento,
-      },
-      startedAt: new Date().toISOString(),
-    }));
-
-    window.dispatchEvent(new Event('storage'));
-    toast.success(`Sesión activa cambiada a: ${user.nombre} (${user.rol})`);
-  };
 
   const saveSelectedPermissions = async () => {
     if (!selected || !documentPerms) return;
@@ -545,25 +526,15 @@ const Usuarios: React.FC = () => {
                       </span>
                     </td>
                     <td>
+                      {/* Fase 0.5: la contrasena se almacena como hash bcrypt y
+                          nunca se envia al renderer. No es posible mostrarla. */}
                       <span className="password-cell">
-                        <span>{showPasswordFor === user.id ? user.password : '********'}</span>
-                        <button
-                          className="btn-icon"
-                          title={showPasswordFor === user.id ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                          aria-label={showPasswordFor === user.id ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowPasswordFor(prev => prev === user.id ? null : user.id);
-                          }}
-                        >
-                          <UsersIcon name={showPasswordFor === user.id ? 'eyeOff' : 'eye'} />
-                        </button>
+                        <span title="Almacenada como hash bcrypt">••••••••</span>
                       </span>
                     </td>
                     <td className="cell-actions" onClick={e => e.stopPropagation()}>
                       <button className="btn btn-sm btn-secondary" onClick={() => startEdit(user)}>Editar</button>
                       <button className="btn btn-sm btn-secondary" onClick={() => openPasswordDialog(user)}>Cambiar pass</button>
-                      <button className="btn btn-sm btn-secondary" onClick={() => activateSession(user)}>Usar sesión</button>
                       <button className="btn btn-sm btn-danger" onClick={() => deleteUser(user)}>Eliminar</button>
                     </td>
                   </tr>

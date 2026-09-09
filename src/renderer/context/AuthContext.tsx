@@ -22,29 +22,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Bypass temporal para desarrollo local. Se removerá en la Fase 8.
-export const DISABLE_LOGIN_FOR_NOW = false;
-
-export const DEV_SESSION_USER: SessionUser = {
-  id: 'dev-user',
-  nombre: 'Modo demo',
-  email: 'demo@local',
-  rol: 'ADMIN',
-  departamento: 'Sistemas',
-};
-
-const DEV_SESSION_RECORD: SessionRecord = {
-  sessionId: 'dev-session-id',
-  userId: 'dev-user',
-  role: 'ADMIN',
-  permissions: ['*'],
-  webContentsId: 0,
-  createdAt: new Date().toISOString(),
-  expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
-  lastActivityAt: new Date().toISOString(),
-  securityVersion: 'dev-bypass',
-};
-
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -59,14 +36,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        if (DISABLE_LOGIN_FOR_NOW) {
-          // Si está el bypass de login activo, auto-loguear el usuario demo
-          setUser(DEV_SESSION_USER);
-          setSession(DEV_SESSION_RECORD);
-          setInitializing(false);
-          return;
-        }
-
         const savedSessionId = localStorage.getItem('sgc.sessionId');
         if (!savedSessionId) {
           setInitializing(false);
@@ -116,12 +85,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (loginName: string, password?: string): Promise<boolean> => {
     setError(null);
     try {
-      if (DISABLE_LOGIN_FOR_NOW) {
-        setUser(DEV_SESSION_USER);
-        setSession(DEV_SESSION_RECORD);
-        return true;
-      }
-
       const res: AuthResponse = await (window as any).auth.login(loginName, password);
       if (res.success && res.session) {
         const userData = await (window as any).repo.call('UsuarioRepo', 'getById', res.session.userId);
@@ -136,7 +99,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(mappedUser);
           setSession(res.session);
 
-          // Sincronizar con almacenamiento local para compatibilidad heredada
+          // Compatibilidad heredada (Fase 0.5).
+          //
+          // ATENCION: estas claves NO tienen autoridad. Son un espejo puramente
+          // visual para modulos que aun leen el usuario/rol desde localStorage
+          // (Documentacion, Registros, useDocumentacionSave).
+          //
+          // La autorizacion se decide siempre en el proceso main:
+          //   - withAuth resuelve la sesion por webContents.id;
+          //   - withSessionActor sobreescribe rol/usuario en los canales records:*.
+          // Manipular estas claves NO concede privilegios.
+          //
+          // Reducirlas a solo sgc.sessionId esta planificado como P1-2 en
+          // docs/security/SECURITY_BACKLOG.md.
           localStorage.setItem('sgc.sessionId', res.session.sessionId);
           localStorage.setItem('sgc.currentRole', userData.rol);
           localStorage.setItem('sgc.currentUser', JSON.stringify({
@@ -171,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async (): Promise<void> => {
     try {
-      if (!DISABLE_LOGIN_FOR_NOW && session) {
+      if (session) {
         await (window as any).auth.logout(session.sessionId);
       }
     } catch (err) {
