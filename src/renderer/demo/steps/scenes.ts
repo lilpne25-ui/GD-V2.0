@@ -22,14 +22,18 @@ export const DEMO_SCENES: Scene[] = [
     title: 'Innovax ya tiene su Sistema de Gestión',
     status: 'context',
     layout: 'stage',
-    autoAdvance: true,
     steps: [
       {
         id: 'intro-innovax',
         title: 'Innovax ya tiene su Sistema de Gestión',
         narrationText:
-          'Innovax ya tiene su Sistema de Gestión: procedimientos, formatos, responsables y una Lista Maestra. ' +
+          'Innovax ya tiene su Sistema de Gestión: ' +
+          'procedimientos, formatos, responsables y una Lista Maestra. ' +
           'GD-V2 parte de lo que ya existe.',
+        speechText:
+          'Innovax ya tiene su Sistema de Gestión: ' +
+          'procedimientos, formatos, responsables y una Lista Maestra. ' +
+          'Ge de ve dos parte de lo que ya existe.',
         status: 'context',
         dataSource: 'REAL',
         visual: 'intro',
@@ -53,14 +57,13 @@ export const DEMO_SCENES: Scene[] = [
     status: 'live',
     layout: 'spotlight',
     section: 'dashboard',
-    autoAdvance: true,
     steps: [
       {
         id: 'session-identity',
         title: 'Identidad y puesto',
         narrationText:
-          'Cada persona accede con su propia sesión. El sistema conoce quién está operando y con qué puesto, ' +
-          'y usa esa identidad para dejar trazabilidad.',
+          'Cada persona entra con su propia sesión. ' +
+          'El sistema sabe quién está operando y con qué puesto, y con esa identidad deja trazabilidad.',
         target: ['app-user-chip'],
         status: 'live',
         dataSource: 'REAL',
@@ -75,13 +78,13 @@ export const DEMO_SCENES: Scene[] = [
     status: 'live',
     layout: 'spotlight',
     section: 'dashboard',
-    autoAdvance: true,
     steps: [
       {
         id: 'dash-documents',
         title: 'Documentos',
         narrationText:
-          'Documentos: los archivos controlados que hoy viven en el sistema. La cifra sale directamente de la base de datos.',
+          'Este panel muestra el estado actual del sistema. ' +
+          'Aquí vemos los documentos controlados que existen hoy, leídos directamente de la base de datos.',
         target: ['dashboard-kpi-documentos', 'dashboard-kpis'],
         status: 'live',
         dataSource: 'REAL',
@@ -90,7 +93,7 @@ export const DEMO_SCENES: Scene[] = [
         id: 'dash-folders',
         title: 'Carpetas',
         narrationText:
-          'Carpetas: la estructura con la que Innovax organiza su información por etapa y por área.',
+          'Las carpetas reflejan cómo Innovax organiza su información, por etapa y por área.',
         target: ['dashboard-kpi-carpetas', 'dashboard-kpis'],
         status: 'live',
         dataSource: 'REAL',
@@ -99,7 +102,8 @@ export const DEMO_SCENES: Scene[] = [
         id: 'dash-pending',
         title: 'Pendientes de revisión',
         narrationText:
-          'Pendientes: documentos que esperan revisión. Es la primera señal de dónde se está deteniendo el flujo.',
+          'Aquí están los documentos que esperan revisión. ' +
+          'Es la primera señal de dónde se detiene el flujo.',
         target: ['dashboard-kpi-pendientes', 'dashboard-kpis'],
         status: 'live',
         dataSource: 'REAL',
@@ -108,7 +112,7 @@ export const DEMO_SCENES: Scene[] = [
         id: 'dash-users',
         title: 'Usuarios activos',
         narrationText:
-          'Usuarios: quiénes pueden operar el sistema hoy, cada uno con su propia sesión.',
+          'Y aquí, cuántas personas pueden operar hoy el sistema, cada una con su propia sesión.',
         target: ['dashboard-kpi-usuarios', 'dashboard-kpis'],
         status: 'live',
         dataSource: 'REAL',
@@ -117,7 +121,7 @@ export const DEMO_SCENES: Scene[] = [
         id: 'dash-summary',
         title: 'Resumen operativo',
         narrationText:
-          'El resumen traduce esas cifras en estado operativo, para que Dirección y Calidad lo lean de un vistazo.',
+          'El resumen traduce esas cifras a estado operativo, para que Dirección y Calidad lo lean de un vistazo.',
         target: ['dashboard-summary', 'dashboard-root'],
         status: 'live',
         dataSource: 'REAL',
@@ -126,7 +130,9 @@ export const DEMO_SCENES: Scene[] = [
         id: 'dash-activity',
         title: 'Bitácora de actividad',
         narrationText:
-          'El sistema no solo almacena información: registra la actividad. Se sabe qué ocurrió, cuándo, quién lo hizo y en qué elemento.',
+          'El sistema no solo guarda información: ' +
+          'registra la actividad. ' +
+          'Se sabe qué pasó, cuándo, quién lo hizo y sobre qué documento.',
         target: ['dashboard-audit', 'dashboard-root'],
         status: 'live',
         dataSource: 'REAL',
@@ -142,12 +148,12 @@ export const DEMO_SCENES: Scene[] = [
     layout: 'spotlight',
     section: 'documentacion',
     onEnter: [{ kind: 'doc.reset' }],
-    autoAdvance: true,
     steps: [
       {
         id: 'docs-tree',
         title: 'Estructura documental',
-        narrationText: 'Esta es la estructura documental real de Innovax, tal como está hoy dentro del sistema.',
+        narrationText:
+          'Desde aquí, Calidad consulta la documentación vigente de Innovax, con la misma estructura que ya utilizan.',
         target: ['documentacion-tree', 'documentacion-root'],
         status: 'live',
         dataSource: 'REAL',
@@ -156,7 +162,8 @@ export const DEMO_SCENES: Scene[] = [
         id: 'docs-lifecycle',
         title: 'Ciclo de vida del documento',
         narrationText:
-          'Las carpetas siguen el ciclo de vida del documento: en proceso, para revisión y aprobado.',
+          'Las carpetas siguen el ciclo de vida del documento: ' +
+          'en proceso, en revisión y aprobado.',
         action: { kind: 'doc.openFolderPath', params: { path: DEMO_APPROVED_FOLDER } },
         target: ['doc-tree-focus', 'documentacion-tree'],
         status: 'live',
@@ -199,13 +206,13 @@ export const DEMO_SCENES: Scene[] = [
     status: 'live',
     layout: 'spotlight',
     section: 'documentacion',
-    autoAdvance: true,
     steps: [
       {
         id: 'search-code',
         title: 'Buscar por código',
         narrationText:
-          'Buscamos por código. La búsqueda filtra los documentos de la carpeta en la que estamos.',
+          'Ahora buscamos por código. ' +
+          'La búsqueda filtra los documentos de la carpeta en la que estamos.',
         action: { kind: 'doc.setSearch', params: { text: DEMO_SEARCH_CODE } },
         target: ['doc-search', 'documentacion-main'],
         status: 'live',
@@ -215,7 +222,7 @@ export const DEMO_SCENES: Scene[] = [
         id: 'search-results',
         title: 'Resultado inmediato',
         narrationText:
-          'En segundos aparecen la Lista Maestra y sus formatos relacionados, sin recorrer la estructura a mano.',
+          'En segundos aparecen la Lista Maestra y sus formatos relacionados, sin recorrer carpetas a mano.',
         target: ['doc-grid', 'documentacion-main'],
         status: 'live',
         dataSource: 'REAL',
@@ -231,14 +238,13 @@ export const DEMO_SCENES: Scene[] = [
     layout: 'spotlight',
     section: 'documentacion',
     onExit: [{ kind: 'doc.closeDocumentViewers' }],
-    autoAdvance: false,
     steps: [
       {
         id: 'master-row',
         title: 'Información que Innovax ya usa',
         narrationText:
           'Esta es la Lista Maestra de documentos internos que Innovax ya utiliza. ' +
-          'La diferencia es que ahora el sistema sabe dónde está y dentro de qué flujo participa.',
+          'La diferencia es que ahora el sistema sabe dónde está y en qué flujo participa.',
         action: { kind: 'doc.focusNode', params: { name: DEMO_MASTER_LIST } },
         target: ['doc-node-focus', 'doc-grid'],
         status: 'live',
@@ -249,7 +255,8 @@ export const DEMO_SCENES: Scene[] = [
         id: 'master-viewer',
         title: 'Visor protegido',
         narrationText:
-          'El documento se abre en un visor protegido. La marca de agua identifica al usuario, su puesto y la hora de consulta.',
+          'Aquí podemos consultar directamente la Lista Maestra en un visor protegido. ' +
+          'La marca de agua identifica a quien consulta, su puesto y la hora.',
         action: {
           kind: 'doc.openDocumentViewer',
           params: { name: DEMO_MASTER_LIST },
@@ -260,6 +267,7 @@ export const DEMO_SCENES: Scene[] = [
         status: 'live',
         dataSource: 'REAL',
         fallbackText: 'El visor no pudo abrirse en este entorno. La demo continúa.',
+        autoAdvance: false,
       },
       {
         id: 'master-protection',
@@ -281,7 +289,6 @@ export const DEMO_SCENES: Scene[] = [
     status: 'next',
     layout: 'spotlight',
     section: 'documentacion',
-    autoAdvance: false,
     steps: [
       {
         id: 'mirror-attributes',
@@ -296,8 +303,11 @@ export const DEMO_SCENES: Scene[] = [
         id: 'mirror-rules',
         title: 'Lo que será regla',
         narrationText:
-          'La siguiente etapa es que esos atributos controlen el sistema: el responsable dispara el workflow, ' +
-          'el acceso define permisos, la revisión controla versiones y la retención aplica la política.',
+          'La siguiente etapa es que esos atributos controlen el sistema: ' +
+          'el responsable dispara el workflow, el acceso define permisos, la revisión controla versiones y la retención aplica la política.',
+        speechText:
+          'La siguiente etapa es que esos atributos controlen el sistema: ' +
+          'el responsable dispara el flujo de revisión, el acceso define permisos, la revisión controla versiones y la retención aplica la política.',
         target: ['doc-node-focus', 'doc-grid'],
         status: 'next',
         dataSource: 'DEMO_EXAMPLE',
@@ -314,7 +324,6 @@ export const DEMO_SCENES: Scene[] = [
     layout: 'spotlight',
     section: 'documentacion',
     onExit: [{ kind: 'doc.closeAccessDialog' }],
-    autoAdvance: true,
     steps: [
       {
         id: 'perm-identity',
@@ -331,6 +340,9 @@ export const DEMO_SCENES: Scene[] = [
         narrationText:
           'Agregar, eliminar, renombrar, mover y firmar se configuran por usuario. ' +
           'El SGC deja de depender de quién conoce la carpeta.',
+        speechText:
+          'Agregar, eliminar, renombrar, mover y firmar se configuran por usuario. ' +
+          'El sistema de gestión deja de depender de quién conoce la carpeta.',
         target: ['doc-access-perms', 'doc-access-dialog'],
         status: 'live',
         dataSource: 'REAL',
@@ -346,7 +358,6 @@ export const DEMO_SCENES: Scene[] = [
     layout: 'spotlight',
     section: 'documentacion',
     onExit: [{ kind: 'doc.closeReviewInbox' }],
-    autoAdvance: false,
     steps: [
       {
         id: 'review-inbox',
@@ -362,6 +373,9 @@ export const DEMO_SCENES: Scene[] = [
         title: 'Quién decide',
         narrationText:
           'La bandeja indica quién puede aprobar o pedir correcciones: Coordinación del SGC, Dirección o Administración.',
+        speechText:
+          'La bandeja indica quién puede aprobar o pedir correcciones: ' +
+          'Coordinación del ese ge ce, Dirección o Administración.',
         target: ['doc-review-rule', 'doc-review-dialog'],
         status: 'live',
         dataSource: 'REAL',
@@ -380,11 +394,13 @@ export const DEMO_SCENES: Scene[] = [
         id: 'review-decision',
         title: 'Aprobar o corregir',
         narrationText:
-          'Aprobar o solicitar correcciones queda registrado con quién y cuándo. En la demo no pulsamos estos botones.',
+          'Aprobar o solicitar correcciones queda registrado con quién y cuándo. ' +
+          'En la demo no pulsamos estos botones.',
         target: ['doc-review-actions'],
         status: 'live',
         dataSource: 'REAL',
         fallbackText: 'Sin documentos pendientes, los botones Aprobar y Corregir no se muestran.',
+        autoAdvance: false,
       },
     ],
   },
@@ -397,7 +413,6 @@ export const DEMO_SCENES: Scene[] = [
     layout: 'spotlight',
     section: 'documentacion',
     onExit: [{ kind: 'app.closeNotifications' }],
-    autoAdvance: true,
     steps: [
       {
         id: 'notif-bell',
@@ -443,13 +458,12 @@ export const DEMO_SCENES: Scene[] = [
       { kind: 'dynamic.selectType', params: { code: 'FP-05-C' } },
     ],
     onExit: [{ kind: 'dynamic.resetForm' }],
-    autoAdvance: false,
     steps: [
       {
         id: 'fp05-type',
         title: 'Tipo de registro FP-05-C',
         narrationText:
-          'Un formato del SGC deja de ser un archivo muerto y se convierte en una captura estructurada.',
+          'Un formato del sistema de gestión deja de ser un archivo muerto y se convierte en una captura estructurada.',
         target: ['dynamic-type-picker', 'dynamic-records-root'],
         status: 'live',
         dataSource: 'REAL',
@@ -458,7 +472,11 @@ export const DEMO_SCENES: Scene[] = [
         id: 'fp05-definition',
         title: 'El formulario nace de su definición',
         narrationText:
-          'No se programó una pantalla específica para FP-05-C. El formulario nace de su definición.',
+          'No programamos una pantalla especial para FP-05-C: ' +
+          'el formulario nace de su definición.',
+        speechText:
+          'No programamos una pantalla especial para el efe pe cero cinco ce: ' +
+          'el formulario nace de su definición.',
         target: ['dynamic-record-form', 'dynamic-records-root'],
         status: 'live',
         dataSource: 'REAL',
@@ -466,7 +484,9 @@ export const DEMO_SCENES: Scene[] = [
       {
         id: 'fp05-equipment',
         title: 'Equipo',
-        narrationText: 'Equipo: el usuario lo elige de una lista definida; no se escribe a mano.',
+        narrationText:
+          'Equipo: ' +
+          'el usuario lo elige de una lista definida, no lo escribe a mano.',
         target: ['dynamic-field-equipo', 'dynamic-record-form'],
         status: 'live',
         dataSource: 'REAL',
@@ -476,7 +496,9 @@ export const DEMO_SCENES: Scene[] = [
       {
         id: 'fp05-kind',
         title: 'Preventivo o correctivo',
-        narrationText: 'Preventivo o correctivo: una clasificación que después permite medir.',
+        narrationText:
+          'Preventivo o correctivo: ' +
+          'una clasificación que después permite medir.',
         target: ['dynamic-field-tipo', 'dynamic-record-form'],
         status: 'live',
         dataSource: 'REAL',
@@ -486,7 +508,8 @@ export const DEMO_SCENES: Scene[] = [
       {
         id: 'fp05-activity',
         title: 'Actividad realizada',
-        narrationText: 'Actividad: el detalle técnico lo captura quien hizo el trabajo.',
+        narrationText:
+          'La actividad la captura quien hizo el trabajo, con el detalle técnico.',
         target: ['dynamic-field-actividad', 'dynamic-record-form'],
         status: 'live',
         dataSource: 'REAL',
@@ -497,7 +520,8 @@ export const DEMO_SCENES: Scene[] = [
         id: 'fp05-owner',
         title: 'Responsable automático',
         narrationText:
-          'Responsable: lo asigna el sistema a partir de la sesión. El usuario no lo escribe.',
+          'El responsable lo asigna el sistema a partir de la sesión. ' +
+          'Nadie tiene que escribirlo.',
         target: ['dynamic-field-responsable', 'dynamic-record-form'],
         status: 'live',
         dataSource: 'REAL',
@@ -508,7 +532,8 @@ export const DEMO_SCENES: Scene[] = [
         id: 'fp05-date',
         title: 'Fecha automática',
         narrationText:
-          'Fecha: la registra el sistema al guardar. No depende de que alguien la recuerde.',
+          'La fecha también la pone el sistema. ' +
+          'No depende de que alguien la recuerde.',
         target: ['dynamic-field-fecha', 'dynamic-record-form'],
         status: 'live',
         dataSource: 'REAL',
@@ -544,7 +569,6 @@ export const DEMO_SCENES: Scene[] = [
     status: 'live',
     layout: 'spotlight',
     section: 'registros',
-    autoAdvance: false,
     steps: [
       {
         id: 'record-lifecycle',
@@ -566,6 +590,7 @@ export const DEMO_SCENES: Scene[] = [
         status: 'live',
         dataSource: 'NO_DATA',
         visual: 'record-lifecycle',
+        autoAdvance: false,
       },
     ],
   },
@@ -576,12 +601,16 @@ export const DEMO_SCENES: Scene[] = [
     title: 'FP-15-C · Registro de paros CNC',
     status: 'next',
     layout: 'stage',
-    autoAdvance: false,
     steps: [
       {
         id: 'fp15-format',
         title: 'Ese sigue siendo su FP-15',
-        narrationText: 'Ese sigue siendo su FP-15. Pero ahora produce información.',
+        narrationText:
+          'Ese sigue siendo su FP-15. ' +
+          'Pero ahora produce información.',
+        speechText:
+          'Ese sigue siendo su efe pe quince. ' +
+          'Pero ahora produce información.',
         status: 'next',
         dataSource: 'ANONYMIZED_REAL',
         visual: 'fp15',
@@ -595,6 +624,7 @@ export const DEMO_SCENES: Scene[] = [
         status: 'next',
         dataSource: 'ANONYMIZED_REAL',
         visual: 'fp15-flow',
+        autoAdvance: false,
       },
     ],
   },
@@ -605,7 +635,6 @@ export const DEMO_SCENES: Scene[] = [
     title: 'Cerrar el ciclo de calidad',
     status: 'vision',
     layout: 'stage',
-    autoAdvance: false,
     steps: [
       {
         id: 'loop-chain',
@@ -621,10 +650,15 @@ export const DEMO_SCENES: Scene[] = [
         id: 'loop-value',
         title: 'Evidencia conectada',
         narrationText:
-          'ISO 9001 no termina al almacenar un documento. El valor aparece cuando la evidencia, el problema, la acción y la mejora quedan conectados.',
+          'ISO 9001 no termina al almacenar un documento. ' +
+          'El valor aparece cuando la evidencia, el problema, la acción y la mejora quedan conectados.',
+        speechText:
+          'La norma iso nueve mil uno no termina al almacenar un documento. ' +
+          'El valor aparece cuando la evidencia, el problema, la acción y la mejora quedan conectados.',
         status: 'vision',
         dataSource: 'VISION',
         visual: 'closed-loop-value',
+        autoAdvance: false,
       },
     ],
   },
@@ -635,7 +669,6 @@ export const DEMO_SCENES: Scene[] = [
     title: 'Cómo llegamos de aquí a operación real',
     status: 'plan',
     layout: 'stage',
-    autoAdvance: false,
     steps: [
       {
         id: 'plan-horizons',
@@ -643,6 +676,9 @@ export const DEMO_SCENES: Scene[] = [
         narrationText:
           'Hoy ya hay control documental, workflow, seguridad, trazabilidad y registros dinámicos. ' +
           'Después vienen procesos, FP-15, acciones, riesgos e indicadores, y finalmente auditorías, revisión por la dirección e integración.',
+        speechText:
+          'Hoy ya hay control documental, flujo de revisión, seguridad, trazabilidad y registros dinámicos. ' +
+          'Después vienen procesos, efe pe quince, acciones, riesgos e indicadores, y finalmente auditorías, revisión por la dirección e integración.',
         status: 'plan',
         dataSource: 'VISION',
         visual: 'roadmap',
@@ -651,10 +687,13 @@ export const DEMO_SCENES: Scene[] = [
         id: 'plan-close',
         title: 'Tu Sistema de Gestión ya existe',
         narrationText:
-          'Tu Sistema de Gestión ya existe. Nosotros lo hacemos operativo. El siguiente paso es definir juntos el piloto de Innovax.',
+          'Tu Sistema de Gestión ya existe. ' +
+          'Nosotros lo hacemos operativo. ' +
+          'El siguiente paso es definir juntos el piloto de Innovax.',
         status: 'plan',
         dataSource: 'VISION',
         visual: 'roadmap-close',
+        autoAdvance: false,
       },
     ],
   },

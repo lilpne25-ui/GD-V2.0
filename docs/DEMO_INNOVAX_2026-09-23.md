@@ -27,7 +27,8 @@ producción. La demo marca cada pantalla con su estado real.
 | Rama de la demo | `demo/innovax-guided-2026-09-23` |
 | Base | `fix/auth-hardening-0.5` @ `c633d9d` (PR #2, **abierto y sin mergear**) |
 | Commit de la demo (v1, 8 pasos) | `fc4a620` (`feat: add Innovax guided product demo`) |
-| Fase 1 (15 escenas, 47 micro-pasos) | último commit de la rama: `git log -1 --oneline` |
+| Fase 1 (15 escenas, 47 micro-pasos) | `cc68c6f` |
+| Fase 2 (voz) | último commit de la rama: `git log -1 --oneline` |
 
 La demo **depende** de Auth & Security Foundation 0.5: por eso parte de la rama
 del PR #2 y no de `main`. No se ha hecho merge a `main`.
@@ -150,20 +151,20 @@ SGC_BOOTSTRAP_ADMIN_LOGIN=<email-o-id> SGC_BOOTSTRAP_ADMIN_PASSWORD='<nueva>' np
 ## 9. Dónde está el botón y cómo se controla
 
 Barra superior, a la izquierda del usuario con sesión:
-**▶ Demo guiada Innovax**. Solo existe después de iniciar sesión.
+**▶ Demo guiada Innovax**. Solo existe después de iniciar sesión. Abre la
+portada **sin hablar**; el recorrido empieza con **▶ Iniciar recorrido**.
 
 | Tecla | Acción |
 |---|---|
-| `→` | Siguiente micro-paso |
-| `←` | Micro-paso anterior |
-| `Espacio` | Reproducir / pausar |
-| `Esc` | Salir |
+| `→` | Siguiente micro-paso (corta la voz en curso) |
+| `←` | Micro-paso anterior (corta la voz en curso) |
+| `Espacio` | Pausar / reanudar voz y avance |
+| `Esc` | Salir (corta la voz) |
 
-La demo arranca **en pausa**. Con `Espacio` avanza sola cada 8 s y **se
-detiene sola** al llegar a las escenas que se presentan en vivo (6, 7, 9, 11–15)
-y en cualquier paso que requiera al presentador (el visor protegido). Las
-teclas no se interceptan mientras se escribe en un campo. En el panel central,
-los puntos inferiores saltan a cualquier escena.
+Voz, modos **Automático / Manual**, pasos que esperan al presentador y
+troubleshooting: **sección 19 (Fase 2 — Voz)**. Las teclas no se interceptan
+mientras se escribe en un campo. En el panel central, los puntos inferiores
+saltan a cualquier escena.
 
 ---
 
@@ -228,16 +229,16 @@ no los abre.
   organigrama, aviso de privacidad, `Libro1`, `Hoja principal`): la lista
   `FORBIDDEN_DEMO_DOCUMENTS` se comprueba también dentro de Documentación.
 
-### Arquitectura (preparada para la Fase 2 — voz, no implementada)
+### Arquitectura
 
 | Carpeta | Responsabilidad |
 |---|---|
 | `demo/types/` | Tipos: `Scene`, `MicroStep` (id, title, narrationText, target, action, cleanup, status, dataSource…) |
 | `demo/steps/` | Guion: `scenes.ts`, etiquetas de estado |
 | `demo/actions/` | Política de solo lectura y ejecutor con timeout |
-| `demo/engine/` | Motor por eventos (limpieza → navegación → acción → spotlight) y autoplay |
+| `demo/engine/` | Motor por eventos (limpieza → navegación → acción → spotlight) y reproducción con voz (`usePlayback`) |
 | `demo/spotlight/` | Localizar, revelar e iluminar el objetivo |
-| `demo/narration/` | Línea de tiempo con `next`/`prev` por micro-paso (contrato de la Fase 2) |
+| `demo/narration/` | Línea de tiempo, motor de voz local y controlador de narración (Fase 2) |
 | `demo/data/` | Datos reales de solo lectura, ejemplo FP-15 y documentos seguros |
 
 ---
@@ -386,3 +387,150 @@ No se necesita. La demo **no depende de RAG** ni lo menciona. Mantener
 | webpack main (producción) | Compila sin warnings |
 | Arnés visual (App real con IPC simulado, 1366 × 768) | 47/47 micro-pasos; spotlight encontrado en todos los pasos en vivo; 0 escrituras registradas; cierre limpio |
 | `npm start` real | Ver el informe de entrega: el login y el recorrido con sesión real los hace el presentador (checklist, puntos 6–9) |
+
+---
+
+## 19. FASE 2 — VOZ
+
+La demo puede contarse sola: **la voz sigue a la interfaz**.
+
+```
+acción → interfaz estable → spotlight → pausa breve → narración
+      → fin REAL de la voz → pausa natural → siguiente micro-paso
+```
+
+No hay tiempos fijos por paso: la duración la marca la voz (`onend`). Las
+pausas breves (≈0,45 s antes de hablar y ≈0,65 s después) son secundarias.
+
+### Motor de voz
+
+- **100 % local:** Web Speech API (`speechSynthesis`) con las voces instaladas
+  en Windows. **Sin internet, sin API keys, sin cuentas.** Las voces remotas se
+  ignoran.
+- **Selección por capacidad, nunca por nombre:** `es-MX` → voz en español de
+  México/Latinoamérica → cualquier `es-*` → voz predeterminada del sistema.
+- **En esta PC:** hay instaladas *Microsoft Raúl* y *Microsoft Sabina*
+  (es-MX) y *Helena, Laura, Pablo* (es-ES), todas locales. Se elige la primera
+  voz es-MX que ofrece Windows (en la prueba: **Microsoft Raúl – Spanish
+  (Mexico)**), salvo que la voz predeterminada de Windows sea es-MX: entonces se
+  usa esa. **Para usar Sabina:** *Configuración › Hora e idioma › Voz › Voz
+  predeterminada → Microsoft Sabina* y reiniciar la app. La consola registra
+  `[GuidedDemo] Voz seleccionada: …`.
+- **Tono:** velocidad 0,95, pitch 1,0, volumen 1,0.
+- **Robustez:** se habla frase a frase; un *watchdog* corta una locución colgada
+  (sin `onend`) y la demo sigue; cualquier fallo muestra
+  *"Voz no disponible. Continuando en modo manual."*
+
+Código: `src/renderer/demo/narration/` (`VoiceEngine.ts`, `VoiceController.ts`,
+`voiceEngineFactory.ts`, `FakeVoiceEngine.ts` para pruebas) y
+`src/renderer/demo/engine/usePlayback.ts` (sustituye al autoplay de 8 s).
+
+### Inicio
+
+**▶ Demo guiada Innovax** abre la portada **sin hablar**. La voz se prepara y
+empieza al pulsar **▶ Iniciar recorrido** (también `→`, `Espacio` o el botón de
+la portada). Arranca en **Automático** con voz.
+
+### Controles
+
+| Control | Efecto |
+|---|---|
+| `→` / **Siguiente** | Corta la voz y pasa al siguiente micro-paso (que se narra) |
+| `←` / **Anterior** | Igual, hacia atrás |
+| `Espacio` / **❚❚ Pausar** | Pausa la voz **y** el avance; el spotlight se queda |
+| `Espacio` / **▶ Reanudar** | Continúa la frase y la secuencia |
+| `Esc` / **×** | Corta la voz, limpia y sale |
+| **🔊 Voz activada / 🔇 Voz desactivada** | Activa o silencia la voz. Sin voz, el texto sigue en pantalla |
+| **Automático / Manual** | Automático: avanza al terminar la voz. Manual: narra y espera `→` |
+| **↻ Repetir** | Vuelve a narrar el paso actual |
+
+El texto de cada paso (`narrationText`) está **siempre visible** como
+subtítulo: la demo funciona igual sin audio.
+
+### Modos (internos)
+
+| Modo | Cuándo | Avance |
+|---|---|---|
+| `VOICE_SYNC` | Automático + voz | Al terminar la voz |
+| `AUTOPLAY` | Automático sin voz | Tiempo de lectura del texto (3,5–14 s) |
+| `MANUAL` | Manual (o la voz falló) | Solo con `→` |
+
+### Pasos que no avanzan solos
+
+La narración termina, el spotlight se queda y aparece *"Pulsa Siguiente (→)
+para continuar"*:
+
+| Paso | Motivo |
+|---|---|
+| `master-viewer` (6.2) | El presentador decide si abre el visor protegido |
+| `review-decision` (9.4) | Recordar que no se pulsan Aprobar/Corregir |
+| `record-protection` (12.2) | Capacidad sin dato de demo: el presentador comenta |
+| `fp15-data` (13.2) | Momento clave de FP-15-C |
+| `loop-value` (14.2) | Cierre de la visión |
+| `plan-close` (15.2) | Cierre y CTA |
+
+Además, **cualquier paso cuyo objetivo no aparece** en este entorno (p. ej.
+bandeja de revisión vacía) narra también el aviso honesto
+(*"Hoy no hay documentos pendientes…"*) y espera `→`.
+
+### Visor protegido y videollamada
+
+El visor **sigue abriéndose solo con el botón del presentador**. En 6.2 la voz
+explica el visor y la demo espera. En **Teams/Zoom** no pulses el botón (las
+ventanas se ven en negro por la protección anticapturas): pulsa `→` y la demo
+continúa. La voz sale por los altavoces de la PC: en videollamada, **comparte
+también el audio del sistema** (Teams: "Incluir audio del sistema"; Zoom:
+"Compartir sonido") o presenta en **Manual con la voz desactivada** y narra tú.
+
+### Pronunciación
+
+Los códigos se muestran tal cual y solo cambia lo que se pronuncia
+(`speechText`, auditable en el micro-guion):
+
+| En pantalla | Se pronuncia |
+|---|---|
+| GD-V2 | "ge de ve dos" |
+| FP-05-C | "efe pe cero cinco ce" |
+| FP-15 | "efe pe quince" |
+| ISO 9001 | "la norma iso nueve mil uno" |
+| SGC | "ese ge ce" / "sistema de gestión" |
+| workflow | "flujo de revisión" |
+
+### Troubleshooting de voz
+
+| Síntoma | Qué hacer |
+|---|---|
+| "Voz no disponible. Continuando en modo manual." | La demo sigue en Manual. Pulsa **🔇 Voz desactivada** para reintentar; si no, presenta sin voz |
+| Windows no ofrece voz es-MX | Se usa otra voz en español (es-ES) o la predeterminada. Para instalar Sabina: *Configuración › Hora e idioma › Voz › Agregar voces › Español (México)* **antes** de la demo, y reiniciar la app |
+| La voz se oye en inglés | No hay ninguna voz en español instalada: instalar Español (México) o desactivar la voz |
+| Deja de hablar a mitad | `Espacio` dos veces (pausa/reanudar) o **↻ Repetir**. Si no, `→` |
+| Reiniciar la narración de un paso | **↻ Repetir** |
+| Sigue hablando tras salir | No debería ocurrir (la voz se corta al salir, cerrar sesión o cerrar la ventana). Si pasa, cerrar la app |
+| No se oye nada | Volumen de Windows y dispositivo de salida; el botón debe decir **🔊 Voz activada** |
+
+### Checklist de voz (antes de presentar)
+
+1. [ ] Volumen de Windows al 60–80 % y la salida en los altavoces correctos.
+2. [ ] Abrir la demo, **▶ Iniciar recorrido** y oír la portada. Revisar en
+       DevTools la línea `Voz seleccionada` (debe ser es-MX).
+3. [ ] Oír 2–3 pasos del Dashboard y pulsar `Espacio` (pausa) y `→` (siguiente)
+       para confirmar que la voz se corta al instante.
+4. [ ] Decidir el modo: **Automático con voz** (la demo se cuenta sola) o
+       **Manual** (tú hablas; con o sin voz).
+5. [ ] En videollamada: probar que el audio del sistema se comparte.
+6. [ ] Salir con `Esc` y comprobar que no sigue hablando.
+
+### Verificación realizada (Fase 2)
+
+| Verificación | Resultado |
+|---|---|
+| `git diff --check` · `npm run typecheck` | Sin errores |
+| `npm test` | 125/125 (34 de voz) |
+| `npm run secret:scan` | 0 hallazgos |
+| webpack renderer / main (producción) | Compilan (solo warnings de tamaño preexistentes) |
+| `npm run demo:preflight` | LISTO para presentar |
+| Arnés con voz simulada (`FakeVoiceEngine`) | 47/47 narrados, sin bloqueos, 0 escrituras; se detiene en los 6 pasos manuales |
+| Arnés sin voces / TTS que falla | "Voz no disponible. Continuando en modo manual." y la demo sigue |
+| Arnés con **voz real** de Windows (Chromium, sin internet) | Voz `Microsoft Raul - Spanish (Mexico)`; 47/47 narrados; spotlight visible al empezar cada narración; **recorrido completo ≈ 7 min 30 s** (452 s, en automático, pulsando `→` en los pasos manuales); 0 escrituras |
+| Interrupciones con voz real | No habla antes de *Iniciar*; Pausa detiene la voz; Reanudar continúa; `→` corta y narra el siguiente; `Esc` deja el sintetizador en silencio |
+| `npm start` con sesión real | Pendiente del presentador (checklist de voz, puntos 1–6): el login no lo hace el asistente |

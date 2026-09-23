@@ -1,4 +1,7 @@
 import React from 'react';
+import { findTarget, TARGET_TIMEOUT_MS, waitForTarget } from './waitForTarget';
+
+export { findTarget };
 
 // Spotlight de la demo: localiza un elemento real por data-demo-id, lo hace
 // visible sin desplazar el documento y dibuja el hueco iluminado.
@@ -15,8 +18,8 @@ export interface Rect {
 
 export type SpotPhase = 'none' | 'searching' | 'found' | 'missing';
 
-const TARGET_TIMEOUT_MS = 6000;
-const POLL_MS = 300;
+/** Seguimiento de la posicion una vez encontrado (layout, scroll, datos que cargan). */
+const TRACK_MS = 200;
 const SPOT_PADDING = 8;
 const VIEWPORT_MARGIN = 6;
 
@@ -37,17 +40,6 @@ export function usePrefersReducedMotion(): boolean {
   }, []);
 
   return reduced;
-}
-
-/** Primer elemento visible cuyo data-demo-id coincide, en orden de preferencia. */
-export function findTarget(ids: string[]): HTMLElement | null {
-  for (const id of ids) {
-    const el = document.querySelector<HTMLElement>(`[data-demo-id="${id}"]`);
-    if (!el) continue;
-    const r = el.getBoundingClientRect();
-    if (r.width > 2 && r.height > 2) return el;
-  }
-  return null;
 }
 
 /**
@@ -90,15 +82,20 @@ function sameRect(a: Rect | null, b: Rect): boolean {
  * Localiza y sigue un objetivo. `targets` null significa "sin spotlight"
  * (paso de panel, o accion todavia en curso). `key` identifica el paso: el
  * array de targets es nuevo en cada render y no sirve como dependencia.
+ *
+ * `settled` pasa a true cuando la posicion deja de moverse (tras el scroll y
+ * la transicion): es la senal para empezar a narrar.
  */
 export function useSpotlight(targets: string[] | null, key: string, reducedMotion: boolean) {
   const [rect, setRect] = React.useState<Rect | null>(null);
   const [phase, setPhase] = React.useState<SpotPhase>('none');
+  const [settled, setSettled] = React.useState(false);
   const targetsRef = React.useRef(targets);
   targetsRef.current = targets;
 
   React.useEffect(() => {
     const ids = targetsRef.current;
+    setSettled(false);
     if (!ids || ids.length === 0) {
       setPhase('none');
       setRect(null);
@@ -106,51 +103,51 @@ export function useSpotlight(targets: string[] | null, key: string, reducedMotio
     }
 
     let cancelled = false;
-    let scrolled = false;
-    const startedAt = performance.now();
+    let tracker: ReturnType<typeof setInterval> | null = null;
+    let last: Rect | null = null;
     setPhase('searching');
 
     const measure = () => {
       if (cancelled) return;
       const el = findTarget(ids);
-
-      if (!el) {
-        if (performance.now() - startedAt > TARGET_TIMEOUT_MS) {
-          setPhase('missing');
-          setRect(null);
-        }
-        return;
-      }
-
-      if (!scrolled) {
-        scrolled = true;
-        try {
-          revealTarget(el, reducedMotion);
-        } catch {
-          // Si no se puede desplazar, el spotlight se dibuja donde este.
-        }
-      }
-
+      if (!el) return;
       const r = el.getBoundingClientRect();
       const next: Rect = { top: r.top, left: r.left, width: r.width, height: r.height };
+      if (sameRect(last, next)) setSettled(true);
+      last = next;
       setRect(prev => (sameRect(prev, next) ? prev : next));
-      setPhase('found');
     };
 
-    measure();
-    const interval = window.setInterval(measure, POLL_MS);
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
+    const handle = waitForTarget(ids, TARGET_TIMEOUT_MS);
+    void handle.promise.then(el => {
+      if (cancelled) return;
+      if (!el) {
+        setPhase('missing');
+        setRect(null);
+        return;
+      }
+      try {
+        revealTarget(el, reducedMotion);
+      } catch {
+        // Si no se puede desplazar, el spotlight se dibuja donde este.
+      }
+      setPhase('found');
+      measure();
+      tracker = setInterval(measure, TRACK_MS);
+      window.addEventListener('resize', measure);
+      window.addEventListener('scroll', measure, true);
+    });
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      handle.cancel();
+      if (tracker) clearInterval(tracker);
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
   }, [key, reducedMotion]);
 
-  return { rect, phase };
+  return { rect, phase, settled };
 }
 
 /** Hueco del spotlight con margen, acotado al viewport. */

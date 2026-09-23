@@ -21,6 +21,9 @@
     "src/renderer/demo/steps/scenes.ts",
     "src/renderer/demo/steps/statusMeta.ts",
     "src/renderer/demo/narration/timeline.ts",
+    "src/renderer/demo/narration/VoiceEngine.ts",
+    "src/renderer/demo/narration/VoiceController.ts",
+    "src/renderer/demo/narration/FakeVoiceEngine.ts",
     "src/shared/**/*.ts"
   ]
 }

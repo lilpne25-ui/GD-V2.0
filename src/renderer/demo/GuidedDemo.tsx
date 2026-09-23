@@ -5,7 +5,8 @@ import { DEMO_SCENES } from './steps/scenes';
 import { demoBus } from './demoBus';
 import { useDemoData } from './data/useDemoData';
 import { useDemoEngine } from './engine/useDemoEngine';
-import { useAutoplay } from './engine/useAutoplay';
+import { usePlayback } from './engine/usePlayback';
+import { speechFor } from './narration/VoiceController';
 import {
   chooseDockCorner,
   dockStyle,
@@ -27,7 +28,12 @@ import { DemoBrand, SOURCE_BY_DATA, SourceTag, StatusBadge } from './DemoBrand';
 //  - Si un objetivo no aparece, la demo sigue con un aviso discreto.
 //
 // Este archivo es solo la vista: el orden lo decide engine/useDemoEngine, el
-// spotlight vive en spotlight/ y las escenas en steps/scenes.ts.
+// spotlight vive en spotlight/, la voz en narration/ (via engine/usePlayback)
+// y las escenas en steps/scenes.ts.
+//
+// Secuencia de cada micro-paso (Fase 2):
+//   accion -> interfaz lista -> spotlight estable -> narracion -> fin real de
+//   la voz -> pausa natural -> siguiente (si el modo y el paso lo permiten).
 
 interface GuidedDemoProps {
   onNavigate: (section: string) => void;
@@ -48,24 +54,31 @@ const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
   const engine = useDemoEngine(DEMO_SCENES, { navigate: onNavigate });
   const { scene, step, phase, pos } = engine;
 
-  const autoplay = useAutoplay({
-    phase,
-    stepKey: step.id,
-    isFirstStepOfScene: pos.step === 0,
-    sceneAutoAdvance: scene.autoAdvance,
-    isLast: engine.isLast,
-    next: engine.next,
-  });
-
   const panelRef = React.useRef<HTMLDivElement>(null);
 
   // Mientras las acciones previas se ejecutan, el spotlight espera.
   const targets = scene.layout === 'spotlight' && phase !== 'running' ? step.target ?? null : null;
-  const { rect, phase: spotPhase } = useSpotlight(
+  const { rect, phase: spotPhase, settled } = useSpotlight(
     targets,
     `${step.id}:${phase === 'running' ? 'running' : 'ready'}`,
     reducedMotion
   );
+
+  // La voz sigue a la interfaz: solo se narra con la pantalla ya estable.
+  const envLimited = phase === 'unavailable' || (!!targets && spotPhase === 'missing');
+  const spotReady = !targets || spotPhase === 'missing' || (spotPhase === 'found' && settled);
+  const uiReady = phase !== 'running' && (scene.layout === 'stage' || spotReady);
+
+  const playback = usePlayback({
+    stepKey: step.id,
+    uiReady,
+    speech: speechFor(step, envLimited),
+    stepAutoAdvance: step.autoAdvance !== false,
+    envLimited,
+    awaitingPresenter: phase === 'awaiting-presenter',
+    isLast: engine.isLast,
+    next: engine.next,
+  });
 
   // --- Feature flag de Dynamic Records: se activa solo durante la demo -----
   React.useEffect(() => {
@@ -133,21 +146,23 @@ const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
   }, []);
 
   // --- Navegacion manual ------------------------------------------------------
+  // Cambiar de paso corta la voz en curso (usePlayback) y arranca la nueva secuencia.
+  const { started, start, togglePause } = playback;
   const goNext = React.useCallback(() => {
-    autoplay.markManual();
+    if (!started) {
+      void start();
+      return;
+    }
     if (!engine.next()) onClose();
-  }, [autoplay, engine, onClose]);
+  }, [started, start, engine, onClose]);
 
   const goPrev = React.useCallback(() => {
-    autoplay.markManual();
     engine.prev();
-  }, [autoplay, engine]);
+  }, [engine]);
 
   const goToScene = React.useCallback((index: number) => {
-    autoplay.stop();
-    autoplay.markManual();
     engine.goTo(index, 0);
-  }, [autoplay, engine]);
+  }, [engine]);
 
   // --- Atajos de teclado ----------------------------------------------------
   React.useEffect(() => {
@@ -175,7 +190,8 @@ const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
         case ' ':
         case 'Spacebar':
           event.preventDefault();
-          autoplay.toggle();
+          if (started) togglePause();
+          else void start();
           break;
         case 'Escape':
           event.preventDefault();
@@ -188,7 +204,7 @@ const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
 
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [goNext, goPrev, autoplay, onClose]);
+  }, [goNext, goPrev, started, start, togglePause, onClose]);
 
   // --- Geometria ------------------------------------------------------------
   const spot = scene.layout === 'spotlight' && spotPhase === 'found' && rect ? spotBox(rect) : null;
@@ -305,30 +321,87 @@ const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
         </div>
 
         <footer className="gd-foot">
-          {autoplay.stoppedHere && (
-            <p className="gd-autostop" role="status">
-              Reproducción en pausa: este paso se presenta en vivo.
+          {started && (
+            <p className={`gd-voice-state${playback.stage === 'speaking' && !playback.paused ? ' is-speaking' : ''}`} role="status">
+              {playback.notice
+                ? playback.notice
+                : playback.paused
+                  ? 'En pausa. Pulsa Reanudar o Espacio para continuar.'
+                  : playback.stage === 'speaking'
+                    ? 'Narrando…'
+                    : playback.awaitingNext
+                      ? (engine.isLast ? 'Fin del recorrido.' : 'Pulsa Siguiente (→) para continuar.')
+                      : playback.voiceStatus === 'initializing'
+                        ? 'Preparando la voz…'
+                        : '\u00a0'}
             </p>
           )}
           <div className="gd-controls">
-            <button type="button" className="gd-btn gd-btn--ghost" onClick={goPrev} disabled={engine.isFirst}>
-              ← Anterior
-            </button>
+            {!started ? (
+              <>
+                <button type="button" className="gd-btn gd-btn--primary" onClick={() => { void start(); }}>
+                  ▶ Iniciar recorrido
+                </button>
+                <button type="button" className="gd-btn gd-btn--quiet" onClick={onClose}>
+                  Salir
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="gd-btn gd-btn--ghost" onClick={goPrev} disabled={engine.isFirst}>
+                  ← Anterior
+                </button>
+                <button
+                  type="button"
+                  className="gd-btn gd-btn--ghost"
+                  onClick={togglePause}
+                  aria-pressed={playback.paused}
+                >
+                  {playback.paused ? '▶ Reanudar' : '❚❚ Pausar'}
+                </button>
+                <button type="button" className="gd-btn gd-btn--primary" onClick={goNext}>
+                  {engine.isLast ? 'Terminar demo' : 'Siguiente →'}
+                </button>
+                {/* En el panel lateral compacto se sale con la × de la cabecera. */}
+                {mode === 'stage' && (
+                  <button type="button" className="gd-btn gd-btn--quiet" onClick={onClose}>
+                    Salir
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          <div className="gd-audio-controls">
             <button
               type="button"
-              className="gd-btn gd-btn--ghost"
-              onClick={autoplay.toggle}
-              aria-pressed={autoplay.enabled}
+              className="gd-chip-btn"
+              onClick={() => { void playback.toggleVoice(); }}
+              aria-pressed={playback.voiceOn}
+              title={playback.voice ? `Voz: ${playback.voice.name}` : 'Narración por voz'}
             >
-              {autoplay.enabled ? '❚❚ Pausar' : '▶ Reproducir'}
+              {playback.voiceOn ? '🔊 Voz activada' : '🔇 Voz desactivada'}
             </button>
-            <button type="button" className="gd-btn gd-btn--primary" onClick={goNext}>
-              {engine.isLast ? 'Terminar demo' : 'Siguiente →'}
-            </button>
-            {/* En el panel lateral compacto se sale con la × de la cabecera. */}
-            {mode === 'stage' && (
-              <button type="button" className="gd-btn gd-btn--quiet" onClick={onClose}>
-                Salir
+            <div className="gd-segmented" role="group" aria-label="Avance del recorrido">
+              <button
+                type="button"
+                className={playback.mode === 'AUTO_NARRATED' ? 'is-active' : ''}
+                aria-pressed={playback.mode === 'AUTO_NARRATED'}
+                onClick={() => playback.setMode('AUTO_NARRATED')}
+              >
+                Automático
+              </button>
+              <button
+                type="button"
+                className={playback.mode === 'MANUAL' ? 'is-active' : ''}
+                aria-pressed={playback.mode === 'MANUAL'}
+                onClick={() => playback.setMode('MANUAL')}
+              >
+                Manual
+              </button>
+            </div>
+            {started && playback.voiceActive && (
+              <button type="button" className="gd-chip-btn" onClick={playback.replay}>
+                ↻ Repetir
               </button>
             )}
           </div>
@@ -348,7 +421,7 @@ const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
                 ))}
               </nav>
               <p className="gd-shortcuts" aria-hidden="true">
-                <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>Espacio</kbd> reproducir/pausar · <kbd>Esc</kbd> salir
+                <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>Espacio</kbd> pausar/reanudar · <kbd>Esc</kbd> salir
               </p>
             </>
           )}

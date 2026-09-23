@@ -77,8 +77,14 @@ export interface MicroStep {
   /** Id estable (kebab-case). La Fase 2 lo usara como clave de audio. */
   id: string;
   title: string;
-  /** 1-3 frases, lenguaje de negocio. Es lo que se narrara en la Fase 2. */
+  /** 1-3 frases, lenguaje de negocio. Es el subtitulo visible y la base de la voz. */
   narrationText: string;
+  /**
+   * Texto para el sintetizador cuando narrationText contiene codigos o siglas
+   * que la voz leeria mal (FP-05-C, GD-V2, ISO 9001...). Solo se usa para el
+   * audio: en pantalla siempre se muestra narrationText con el codigo real.
+   */
+  speechText?: string;
   /** data-demo-id objetivo, en orden de preferencia. Sin target: panel sin spotlight. */
   target?: string[];
   /** Accion de solo lectura previa al spotlight. */
@@ -92,6 +98,11 @@ export interface MicroStep {
   fieldOrigin?: FieldOrigin;
   /** Mensaje si el objetivo no existe en este entorno (p. ej. bandeja vacia). */
   fallbackText?: string;
+  /**
+   * false: al terminar la narracion, la demo espera "Siguiente" aunque el
+   * avance automatico este activo (el presentador habla o actua). Por defecto true.
+   */
+  autoAdvance?: boolean;
 }
 
 export interface Scene {
@@ -106,8 +117,6 @@ export interface Scene {
   onEnter?: DemoAction[];
   /** Limpieza al salir de la escena (cerrar dialogos, limpiar busqueda...). */
   onExit?: DemoAction[];
-  /** Si es false, el autoplay se detiene al llegar: se presenta en vivo. */
-  autoAdvance: boolean;
   steps: MicroStep[];
 }
 
