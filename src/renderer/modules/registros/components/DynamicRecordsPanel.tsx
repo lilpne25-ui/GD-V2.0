@@ -294,27 +294,42 @@ const DynamicRecordsPanel: React.FC = () => {
     }
   }, []);
 
-  // Demo guiada: seleccion de un tipo por codigo (p. ej. FP-05-C). Solo cambia
-  // la seleccion visible; no crea ni modifica registros. Sin peticion
-  // pendiente, el panel se comporta exactamente igual que antes.
-  const [requestedTypeCode, setRequestedTypeCode] = React.useState<string | null>(null);
+  // Demo guiada: seleccion de un tipo por codigo (p. ej. FP-05-C) y reinicio
+  // del formulario. Solo cambia la seleccion visible; no crea ni modifica
+  // registros. Sin comandos de la demo, el panel se comporta igual que antes.
+  const typeRequestRef = React.useRef<{ code: string; resolve: (ok: boolean) => void } | null>(null);
+  const [typeRequestSeq, setTypeRequestSeq] = React.useState(0);
 
   React.useEffect(() => {
-    const pendingCode = demoBus.consumeRecordTypeCode();
-    if (pendingCode) setRequestedTypeCode(pendingCode);
-    return demoBus.onRecordTypeCode(() => {
-      const code = demoBus.consumeRecordTypeCode();
-      if (code) setRequestedTypeCode(code);
+    const off = demoBus.register('dynamic', command => {
+      if (command.kind === 'dynamic.resetForm') {
+        setFormResetKey(prev => prev + 1);
+        return true;
+      }
+      if (command.kind !== 'dynamic.selectType') return false;
+      const code = String(command.params?.code || '').trim().toUpperCase();
+      if (!code) return false;
+      return new Promise<boolean>(resolve => {
+        typeRequestRef.current?.resolve(false);
+        typeRequestRef.current = { code, resolve };
+        setTypeRequestSeq(prev => prev + 1);
+      });
     });
+    return () => {
+      off();
+      typeRequestRef.current?.resolve(false);
+      typeRequestRef.current = null;
+    };
   }, []);
 
   React.useEffect(() => {
-    if (!requestedTypeCode || recordTypes.length === 0) return;
-    const wanted = requestedTypeCode.trim().toUpperCase();
-    const match = recordTypes.find(type => String(type.code || '').trim().toUpperCase() === wanted);
+    const request = typeRequestRef.current;
+    if (!request || recordTypes.length === 0) return;
+    typeRequestRef.current = null;
+    const match = recordTypes.find(type => String(type.code || '').trim().toUpperCase() === request.code);
     if (match) setSelectedTypeId(match.id);
-    setRequestedTypeCode(null);
-  }, [requestedTypeCode, recordTypes]);
+    request.resolve(Boolean(match));
+  }, [typeRequestSeq, recordTypes]);
 
   const handleImportFp05 = React.useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -818,7 +833,7 @@ const DynamicRecordsPanel: React.FC = () => {
           style={{ display: 'none' }}
         />
 
-        <div className="dr-record-list" role="list" aria-label="Registros del tipo seleccionado">
+        <div className="dr-record-list" role="list" data-demo-id="dynamic-record-list" aria-label="Registros del tipo seleccionado">
           {loadingRecords ? (
             <p className="dr-muted">Cargando registros...</p>
           ) : records.length === 0 ? (

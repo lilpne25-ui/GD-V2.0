@@ -1,7 +1,7 @@
 import React from 'react';
 import innovaxLogo from '../assets/branding/innovax/innovax-logo.jpg';
-import { STATUS_META } from './demoStory';
-import type { DemoStatus } from './demoStory';
+import type { DataSource, DemoStatus } from './types';
+import { STATUS_META } from './steps/statusMeta';
 
 /**
  * Logo oficial de Innovax.
@@ -51,12 +51,24 @@ export const StatusBadge: React.FC<{ status: DemoStatus }> = ({ status }) => (
   </span>
 );
 
-export type SourceKind = 'system' | 'example' | 'innovax';
+export type SourceKind = 'system' | 'example' | 'innovax' | 'anonymized' | 'vision' | 'no-data';
 
 const SOURCE_LABEL: Record<SourceKind, string> = {
   system: 'Datos del sistema',
   example: 'Ejemplo de demo',
   innovax: 'Dato de Innovax',
+  anonymized: 'Dato real anonimizado',
+  vision: 'Visión',
+  'no-data': 'Sin dato de demo',
+};
+
+/** Etiqueta de origen que corresponde al dataSource de un micro-paso. */
+export const SOURCE_BY_DATA: Record<DataSource, SourceKind> = {
+  REAL: 'system',
+  ANONYMIZED_REAL: 'anonymized',
+  DEMO_EXAMPLE: 'example',
+  VISION: 'vision',
+  NO_DATA: 'no-data',
 };
 
 /** Etiqueta obligatoria del origen de cada dato mostrado. */

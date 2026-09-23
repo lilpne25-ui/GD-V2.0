@@ -9,6 +9,8 @@ import { AuthProvider, useAuth, SessionUser } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import DemoErrorBoundary from './demo/DemoErrorBoundary';
+import { demoBus } from './demo/demoBus';
+import { isPrototypeSection } from './components/prototypeSections';
 import './styles/global.css';
 import './assets/branding/innovax/innovax-tokens.css';
 import './demo/DemoLaunch.css';
@@ -201,6 +203,9 @@ const AppContent: React.FC = () => {
   React.useEffect(() => {
     if (!showNotiPanel) return;
     const handler = (event: MouseEvent) => {
+      // Los controles de la demo guiada no cierran el panel que estan explicando.
+      const inDemo = (event.target as Element | null)?.closest?.('[data-demo-overlay]');
+      if (inDemo) return;
       if (notiPanelRef.current && !notiPanelRef.current.contains(event.target as Node)) {
         setShowNotiPanel(false);
       }
@@ -271,6 +276,22 @@ const AppContent: React.FC = () => {
 
   const closeDemo = React.useCallback(() => setDemoOpen(false), []);
 
+  // Demo guiada: abre o cierra el centro de notificaciones. Solo lectura: no
+  // marca nada como leido (eso ocurre unicamente al pulsar una notificacion).
+  React.useEffect(() => demoBus.register('app', command => {
+    if (command.kind === 'app.openNotifications') {
+      setShowNotiPanel(true);
+      return true;
+    }
+    if (command.kind === 'app.closeNotifications') {
+      setShowNotiPanel(false);
+      return true;
+    }
+    return false;
+  }), []);
+
+  const firstCorrectionId = notifications.find(n => n.tipo === 'correccion')?.id;
+
   const notiTypeIcon = (tipo: string): import('./components/SgcIcon').SgcIconName => {
     return NOTI_ICON_MAP[tipo] || 'info';
   };
@@ -307,7 +328,7 @@ const AppContent: React.FC = () => {
                 Demo guiada Innovax
               </button>
 
-              <div className="app-user-chip" aria-label={`Sesión activa de ${effectiveUser.nombre}`}>
+              <div className="app-user-chip" data-demo-id="app-user-chip" aria-label={`Sesión activa de ${effectiveUser.nombre}`}>
                 <span className="app-user-avatar">{userInitials || 'SG'}</span>
                 <div className="app-user-meta">
                   <strong>{effectiveUser.nombre}</strong>
@@ -319,6 +340,7 @@ const AppContent: React.FC = () => {
                 <button
                   type="button"
                   className="noti-bell-btn"
+                  data-demo-id="noti-bell"
                   title="Notificaciones"
                   aria-label="Abrir centro de notificaciones"
                   aria-haspopup="dialog"
@@ -330,7 +352,7 @@ const AppContent: React.FC = () => {
                 </button>
 
                 {showNotiPanel && (
-                  <div className="noti-panel" role="dialog" aria-label="Centro de notificaciones">
+                  <div className="noti-panel" role="dialog" data-demo-id="noti-panel" aria-label="Centro de notificaciones">
                     <div className="noti-panel-header">
                       <div className="noti-panel-title-wrap">
                         <strong>Notificaciones</strong>
@@ -350,6 +372,7 @@ const AppContent: React.FC = () => {
                           key={notification.id}
                           type="button"
                           className={`noti-item ${notification.leida === 0 ? 'noti-item--unread' : ''}`}
+                          data-demo-id={notification.id === firstCorrectionId ? 'noti-item-correction' : undefined}
                           onClick={() => { void openDocumentFromNotification(notification); }}
                         >
                           <span className="noti-icon">
@@ -374,6 +397,12 @@ const AppContent: React.FC = () => {
           </header>
           <div id="main-content" className="app-content" role="main">
             <React.Suspense fallback={<div style={{ padding: '12px 4px', color: '#64748b' }}>Cargando módulo...</div>}>
+              {isPrototypeSection(section) && (
+                <div className="prototype-notice" role="note">
+                  <strong>Prototipo de pantalla · Siguiente implementación.</strong>
+                  <span>Los datos que ves son de ejemplo y no pertenecen a Innovax.</span>
+                </div>
+              )}
               {renderSection(section)}
             </React.Suspense>
           </div>

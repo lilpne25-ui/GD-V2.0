@@ -419,7 +419,11 @@ const DynamicRecordForm: React.FC<DynamicRecordFormProps> = ({
           const errorMessage = submitted || touched[field.fieldKey] ? errors[field.fieldKey] : '';
 
           return (
-            <div key={field.id} className={`dr-field dr-field--${field.fieldType}`}>
+            <div
+              key={field.id}
+              className={`dr-field dr-field--${field.fieldType}`}
+              data-demo-id={`dynamic-field-${field.fieldKey}`}
+            >
               <label htmlFor={fieldId} className="dr-label">
                 {field.label}
                 {field.required && <span className="dr-required" aria-hidden="true"> *</span>}
@@ -437,7 +441,12 @@ const DynamicRecordForm: React.FC<DynamicRecordFormProps> = ({
       </div>
 
       <div className="dr-form-actions">
-        <button type="submit" className="btn btn-primary" disabled={submitting || readOnly}>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={submitting || readOnly}
+          data-demo-id="dynamic-submit"
+        >
           {submitting ? 'Guardando...' : submitLabel}
         </button>
       </div>

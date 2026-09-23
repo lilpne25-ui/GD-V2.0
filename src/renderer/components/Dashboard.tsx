@@ -53,6 +53,14 @@ const auditActionTone = (eventType: DocumentoAuditRowUI['event_type']): string =
   return 'success';
 };
 
+/** Anclas de la demo guiada para cada tarjeta (sin efecto fuera de la demo). */
+const KPI_DEMO_IDS: Record<string, string> = {
+  Documentos: 'dashboard-kpi-documentos',
+  Carpetas: 'dashboard-kpi-carpetas',
+  Pendientes: 'dashboard-kpi-pendientes',
+  Usuarios: 'dashboard-kpi-usuarios',
+};
+
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -166,7 +174,7 @@ const Dashboard: React.FC = () => {
           ))
         ) : (
         kpis.map(kpi => (
-          <div key={kpi.label} className="dash-card">
+          <div key={kpi.label} className="dash-card" data-demo-id={KPI_DEMO_IDS[kpi.label]}>
             <div className="dash-card-icon-wrap">
               <SgcIcon name={kpi.icon} size="lg" className="dash-card-icon" color={kpi.color} />
             </div>
@@ -181,7 +189,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="dash-main-grid">
-        <section className="dash-section dash-section--summary">
+        <section className="dash-section dash-section--summary" data-demo-id="dashboard-summary">
           <div className="dash-section-head">
             <div>
               <span className="dash-section-kicker">Resumen operativo</span>

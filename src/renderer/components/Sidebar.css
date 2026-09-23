@@ -144,6 +144,18 @@
   text-overflow: ellipsis;
 }
 
+.sidebar-proto-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  color: rgba(253, 230, 138, 0.95);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .sidebar-footer {
   margin-top: 14px;
   padding: 12px 14px;
@@ -228,6 +240,19 @@
 
   .sidebar-item:hover .sidebar-label {
     opacity: 1;
+  }
+
+  /* En la barra compacta el distintivo se reduce a un punto. */
+  .sidebar-proto-badge {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: 0;
+    background: rgba(251, 191, 36, 0.9);
+    font-size: 0;
   }
 
   .sidebar-item {

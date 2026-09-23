@@ -68,3 +68,23 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Aviso en los modulos que hoy son prototipos con datos de ejemplo. */
+.prototype-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--color-warning);
+  background: var(--color-surface-solid);
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+}
+
+.prototype-notice strong {
+  color: var(--color-warning);
+  font-weight: 800;
+}

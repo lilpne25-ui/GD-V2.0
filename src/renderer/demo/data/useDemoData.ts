@@ -1,6 +1,6 @@
 import React from 'react';
-import type { RecordDefinition } from '../../shared/types/registros-dinamicos';
-import type { RagStatusResult } from '../../shared/types/rag';
+import type { RecordDefinition } from '../../../shared/types/registros-dinamicos';
+import type { RagStatusResult } from '../../../shared/types/rag';
 
 // Datos REALES que la demo consulta para narrar los pasos "Funciona hoy".
 //

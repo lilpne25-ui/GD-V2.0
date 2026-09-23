@@ -13,9 +13,14 @@
     "src/main/ipc/authMiddleware.ts",
     "src/database/db-sqlserver.ts",
     "src/database/repositories/credencialRepo.ts",
-    "src/renderer/demo/demoData.ts",
+    "src/renderer/demo/types/index.ts",
+    "src/renderer/demo/actions/policy.ts",
     "src/renderer/demo/demoBus.ts",
-    "src/renderer/demo/demoStory.ts",
+    "src/renderer/demo/data/demoData.ts",
+    "src/renderer/demo/data/safeDocuments.ts",
+    "src/renderer/demo/steps/scenes.ts",
+    "src/renderer/demo/steps/statusMeta.ts",
+    "src/renderer/demo/narration/timeline.ts",
     "src/shared/**/*.ts"
   ]
 }

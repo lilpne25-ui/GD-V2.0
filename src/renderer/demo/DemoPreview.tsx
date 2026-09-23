@@ -1,34 +1,29 @@
 import React from 'react';
-import type { DemoVisual } from './demoStory';
-import { INNOVAX_CODES } from './demoStory';
-import type { DemoData } from './useDemoData';
+import type { MicroStep } from './types';
+import type { DemoData } from './data/useDemoData';
 import { DemoBrand, SourceTag, StageTag } from './DemoBrand';
-import { FP15_EXAMPLE, fp15Duration } from './demoData';
+import { FP15_EXAMPLE, fp15Duration } from './data/demoData';
 
-// Vistas de cada paso de la demo.
+// Visuales del panel de la demo.
 //
-// Regla de honestidad: todo dato visible lleva una etiqueta de origen
-// (SourceTag) y toda capacidad no construida lleva su marca de etapa. Nada de
-// lo que aqui se muestra escribe en la base de datos.
+// Regla de honestidad: todo dato visible lleva su etiqueta de origen y toda
+// capacidad no construida su marca de etapa. Nada de lo que aqui se muestra
+// escribe en la base de datos.
 
 type Stagger = React.CSSProperties & { '--i'?: number };
 const stagger = (i: number): Stagger => ({ '--i': i });
 
-interface PreviewProps {
-  visual: DemoVisual;
-  data: DemoData;
-  onNext: () => void;
-  onTryRealRag: () => void;
-}
+/** Codigos reales de Innovax que el sistema reconoce tal cual. */
+const INNOVAX_CODES = ['FP-05-C', 'FP-15-C', 'PR-01-A'];
 
 // ---------------------------------------------------------------------------
-// Paso 1 · Contexto Innovax
+// Escena 1 · Apertura
 // ---------------------------------------------------------------------------
 
 const CONTEXT_FLOW = ['197 documentos', 'Procesos', 'Responsables', 'Evidencia'];
 const LISTA_MAESTRA_FIELDS = ['Códigos', 'Áreas', 'Responsables', 'Accesos', 'Permisos', 'Revisiones', 'Retenciones'];
 
-const ContextVisual: React.FC<{ onNext: () => void }> = ({ onNext }) => (
+const IntroVisual: React.FC<{ onNext: () => void }> = ({ onNext }) => (
   <div className="gd-context">
     <div className="gd-context-brand">
       <DemoBrand size="lg" />
@@ -67,202 +62,145 @@ const ContextVisual: React.FC<{ onNext: () => void }> = ({ onNext }) => (
   </div>
 );
 
-// ---------------------------------------------------------------------------
-// Paso 2 · SGC Mirror
-// ---------------------------------------------------------------------------
-
-// Valores ilustrativos: no provienen de la Lista Maestra real.
-const MIRROR_METADATA: Array<{ field: string; value: string }> = [
-  { field: 'Código', value: 'PR-01-A' },
-  { field: 'Área', value: 'Calidad' },
-  { field: 'Responsable', value: 'Coordinación del SGC' },
-  { field: 'Acceso', value: 'Consulta: todas las áreas' },
-  { field: 'Permiso', value: 'Edición: Calidad' },
-  { field: 'Retención', value: 'Según Lista Maestra' },
-  { field: 'Revisión', value: 'Rev. 03' },
-];
-
-const MIRROR_RULES: Array<{ from: string; to: string; detail: string }> = [
-  { from: 'Responsable', to: 'Workflow', detail: 'Quién revisa y aprueba cada cambio' },
-  { from: 'Acceso', to: 'Permisos', detail: 'Quién puede ver cada documento' },
-  { from: 'Revisión', to: 'Versionado', detail: 'Rev. vigente y su historial' },
-  { from: 'Retención', to: 'Política', detail: 'Cuánto tiempo se conserva la evidencia' },
-];
-
-const MirrorVisual: React.FC = () => (
-  <div className="gd-mirror">
-    <section className="gd-mirror-card" aria-label="Metadata actual">
-      <header>
-        <span className="gd-kicker">Metadata actual</span>
-        <SourceTag kind="example" />
-      </header>
-      <dl className="gd-mirror-table">
-        {MIRROR_METADATA.map((row, i) => (
-          <div key={row.field} className="gd-mirror-row" style={stagger(i)}>
-            <dt>{row.field}</dt>
-            <dd>{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-
-    <div className="gd-mirror-bridge" aria-hidden="true">
-      <span className="gd-mirror-bridge-line" />
-      <span className="gd-mirror-bridge-label">se convierte en</span>
-      <span className="gd-mirror-bridge-arrow">↓</span>
+const IntroPromiseVisual: React.FC = () => (
+  <div className="gd-promise">
+    <div className="gd-promise-cols">
+      <section style={stagger(0)}>
+        <span className="gd-kicker">Se conserva</span>
+        <ul>
+          <li>Sus procedimientos y formatos</li>
+          <li>Su nomenclatura y sus códigos</li>
+          <li>Sus responsables y su estructura</li>
+        </ul>
+      </section>
+      <span className="gd-promise-arrow" aria-hidden="true">→</span>
+      <section className="gd-promise-gd" style={stagger(1)}>
+        <span className="gd-kicker">Se vuelve operativo</span>
+        <ul>
+          <li>Documentos controlados y trazables</li>
+          <li>Revisiones con evidencia</li>
+          <li>Formatos convertidos en datos</li>
+        </ul>
+      </section>
     </div>
-
-    <section className="gd-mirror-card gd-mirror-card--rules" aria-label="Reglas ejecutables">
-      <header>
-        <span className="gd-kicker">Reglas ejecutables</span>
-      </header>
-      <ul className="gd-mirror-rules">
-        {MIRROR_RULES.map((rule, i) => (
-          <li key={rule.from} style={stagger(i + 4)}>
-            <span className="gd-mirror-from">{rule.from}</span>
-            <span className="gd-mirror-arrow" aria-hidden="true">→</span>
-            <span className="gd-mirror-to">{rule.to}</span>
-            <small>{rule.detail}</small>
-          </li>
-        ))}
-      </ul>
-    </section>
-
     <div className="gd-mirror-codes" aria-label="Nomenclatura de Innovax">
       <span>El sistema habla el idioma de Innovax:</span>
-      {INNOVAX_CODES.map(code => (
-        <code key={code}>{code}</code>
-      ))}
+      {INNOVAX_CODES.map(code => <code key={code}>{code}</code>)}
     </div>
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Pasos 3-5 · Pantallas reales (panel lateral del spotlight)
+// Escena 7 · De documento a regla (siguiente implementacion)
 // ---------------------------------------------------------------------------
 
-const EnvNotice: React.FC<{ reason: string }> = ({ reason }) => (
-  <p className="gd-env-notice" role="status">
-    <strong>Aviso de entorno.</strong> {reason} La demo continúa con normalidad.
-  </p>
+const MIRROR_RULES: Array<{ from: string; to: string }> = [
+  { from: 'Responsable', to: 'Workflow' },
+  { from: 'Acceso', to: 'Permisos' },
+  { from: 'Revisión', to: 'Versionado' },
+  { from: 'Retención', to: 'Política' },
+];
+
+const MirrorVisual: React.FC = () => (
+  <div className="gd-live">
+    <div className="gd-live-head">
+      <StageTag>Siguiente etapa · SGC Mirror</StageTag>
+    </div>
+    <ul className="gd-mirror-rules gd-mirror-rules--compact">
+      {MIRROR_RULES.map((rule, i) => (
+        <li key={rule.from} style={stagger(i)}>
+          <span className="gd-mirror-from">{rule.from}</span>
+          <span className="gd-mirror-arrow" aria-hidden="true">→</span>
+          <span className="gd-mirror-to">{rule.to}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
 );
 
-const fmt = (n: number) => n.toLocaleString('es-MX');
+// ---------------------------------------------------------------------------
+// Escena 11 · Campos del usuario vs campos del sistema
+// ---------------------------------------------------------------------------
 
-// Los valores reales ya se ven iluminados en la pantalla del Dashboard: el
-// panel solo confirma su origen en una linea, sin duplicarlos en tarjetas.
-const DashboardLive: React.FC<{ data: DemoData }> = ({ data }) => {
-  const { metrics } = data;
-  if (metrics.state === 'loading') return <p className="gd-muted">Consultando la base de datos…</p>;
-  if (metrics.state === 'unavailable') return <EnvNotice reason={metrics.reason} />;
-  const m = metrics.value;
-  return (
-    <div className="gd-live">
-      <SourceTag kind="system" detail="consultado ahora" />
-      <p className="gd-live-line">
-        <strong>{fmt(m.documentos)}</strong> documentos · <strong>{fmt(m.carpetas)}</strong> carpetas ·{' '}
-        <strong>{fmt(m.pendientesRevision)}</strong> pendientes · <strong>{fmt(m.usuariosActivos)}</strong> usuarios activos
-      </p>
-      <p className="gd-muted">
-        {m.eventosAuditoria > 0
-          ? `${fmt(m.eventosAuditoria)} eventos recientes en la bitácora de trazabilidad.`
-          : 'La bitácora de trazabilidad registrará cada acción sobre los documentos.'}
-      </p>
-    </div>
-  );
-};
-
-const DocsLive: React.FC<{ data: DemoData }> = ({ data }) => {
-  const { metrics } = data;
-  return (
-    <div className="gd-live">
-      <ul className="gd-checklist">
-        <li>Estructura de carpetas por proceso</li>
-        <li>Revisión y aprobación con workflow</li>
-        <li>Responsable y actividad de cada documento</li>
-      </ul>
-      {metrics.state === 'ready' && (
-        <>
-          <SourceTag kind="system" />
-          <p className="gd-live-line">
-            <strong>{fmt(metrics.value.documentos)}</strong> documentos controlados ·{' '}
-            <strong>{fmt(metrics.value.pendientesRevision)}</strong> en revisión
-          </p>
-        </>
-      )}
-      {metrics.state === 'unavailable' && <EnvNotice reason={metrics.reason} />}
-      <p className="gd-hint">
-        Puedes abrir un documento real para mostrarlo. La demo no aprueba, borra ni modifica nada.
-      </p>
-    </div>
-  );
-};
-
-function describeField(field: { fieldType: string; defaultValue: unknown; options: unknown[] }): string {
-  const def = typeof field.defaultValue === 'string' ? field.defaultValue : '';
-  if (def.startsWith('@@actor')) return 'Automático · usuario activo';
-  if (def.startsWith('@@now')) return 'Automático · fecha actual';
-  switch (field.fieldType) {
-    case 'select': return `Lista · ${field.options.length} opciones`;
-    case 'textarea': return 'Texto largo';
-    case 'date': return 'Fecha';
-    case 'number': return 'Número';
-    case 'checkbox': return 'Sí / No';
-    case 'computed': return 'Calculado';
-    default: return 'Texto';
-  }
+/** Mismo criterio que DynamicRecordForm: tokens automaticos (@@actor.name, {{today}}...). */
+function isSystemField(field: { defaultValue: unknown; fieldType: string }): boolean {
+  if (field.fieldType === 'computed') return true;
+  const dv = field.defaultValue;
+  return typeof dv === 'string' && (dv.trim().startsWith('@@') || dv.trim().startsWith('{{'));
 }
 
-const DynamicLive: React.FC<{ data: DemoData }> = ({ data }) => {
-  const { fp05c } = data;
-  if (fp05c.state === 'loading') return <p className="gd-muted">Leyendo la definición de FP-05-C…</p>;
-  if (fp05c.state === 'unavailable') return <EnvNotice reason={fp05c.reason} />;
-  if (!fp05c.value) {
+const FieldOriginVisual: React.FC<{ data: DemoData; step: MicroStep }> = ({ data, step }) => {
+  const currentKey = (step.target?.[0] || '').replace('dynamic-field-', '');
+
+  // Se construye con la definicion REAL de FP-05-C: un campo es "del sistema"
+  // si su valor por defecto es un token automatico (@@actor, @@now).
+  if (data.fp05c.state !== 'ready' || !data.fp05c.value) {
     return (
-      <p className="gd-env-notice" role="status">
-        <strong>FP-05-C no está sembrado en esta base.</strong> Se instala con la migración 016 al arrancar la
-        aplicación. La demo continúa con normalidad.
+      <p className="gd-origin-single">
+        {step.fieldOrigin === 'system' ? 'Lo asigna el sistema' : 'Lo captura el usuario'}
       </p>
     );
   }
 
-  const def = fp05c.value;
-  const fields = [...def.fields].filter(f => f.isActive).sort((a, b) => a.displayOrder - b.displayOrder);
+  const fields = [...data.fp05c.value.fields]
+    .filter(f => f.isActive)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+  const userFields = fields.filter(f => !isSystemField(f));
+  const systemFields = fields.filter(f => isSystemField(f));
 
-  return (
-    <div className="gd-live">
-      <div className="gd-live-head">
-        <SourceTag kind="system" detail={`${def.recordType.code} · v${def.recordType.version}`} />
-        <span className="gd-config-badge">Configurado por datos</span>
-      </div>
-      <ul className="gd-fields">
-        {fields.map((field, i) => (
-          <li key={field.id} style={stagger(i)}>
-            <strong>{field.label}</strong>
-            <span>{describeField(field)}</span>
-          </li>
+  const renderGroup = (title: string, items: typeof fields, kind: 'user' | 'system') => (
+    <section className={`gd-origin-group gd-origin-group--${kind}`}>
+      <span className="gd-kicker">{title}</span>
+      <ul>
+        {items.map(f => (
+          <li key={f.id} className={f.fieldKey === currentKey ? 'is-current' : ''}>{f.label}</li>
         ))}
       </ul>
-      <p className="gd-hint">
-        “Importar FP-05” convierte un Excel en definición + registros sin crear otra aplicación. La demo no ejecuta
-        ninguna importación.
-      </p>
+    </section>
+  );
+
+  return (
+    <div className="gd-origin">
+      {renderGroup('Captura el usuario', userFields, 'user')}
+      {renderGroup('Asigna el sistema', systemFields, 'system')}
     </div>
   );
 };
 
 // ---------------------------------------------------------------------------
-// Paso 6 · FP-15-C
+// Escena 12 · Ciclo de vida del registro (capacidad sin dato de demo)
 // ---------------------------------------------------------------------------
 
-const FP15_FLOW: Array<{ label: string; stage?: string }> = [
-  { label: 'Pareto' },
-  { label: 'Recurrencia' },
-  { label: 'No conformidad', stage: 'Siguiente etapa' },
-  { label: 'CAPA', stage: 'Siguiente etapa' },
-  { label: 'Riesgo', stage: 'Siguiente etapa' },
-  { label: 'KPI' },
-];
+const LIFECYCLE = ['Borrador', 'En revisión', 'Aprobado'];
+const LIFECYCLE_ALT = ['Rechazado', 'Obsoleto'];
+
+const RecordLifecycleVisual: React.FC = () => (
+  <div className="gd-live">
+    <div className="gd-live-head">
+      <SourceTag kind="no-data" detail="capacidad implementada · sin registro de demo en esta base" />
+    </div>
+    <ol className="gd-lifecycle" aria-label="Estados del registro">
+      {LIFECYCLE.map((state, i) => (
+        <li key={state} style={stagger(i)}>
+          {i > 0 && <span className="gd-flow-arrow" aria-hidden="true">→</span>}
+          <span className={`gd-state gd-state--${i}`}>{state}</span>
+        </li>
+      ))}
+    </ol>
+    <p className="gd-lifecycle-alt">
+      También: {LIFECYCLE_ALT.join(' · ')}
+    </p>
+    <ul className="gd-checklist">
+      <li>Solo se edita en borrador</li>
+      <li>Cada transición queda registrada con quién y cuándo</li>
+      <li>Auditoría de cada cambio: antes y después</li>
+    </ul>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Escena 13 · FP-15-C (siguiente implementacion, datos anonimizados)
+// ---------------------------------------------------------------------------
 
 const Fp15Visual: React.FC = () => {
   const ex = FP15_EXAMPLE;
@@ -278,13 +216,12 @@ const Fp15Visual: React.FC = () => {
     ['5 Porqués', `${ex.porquesCompletos}/${ex.porquesTotal}`],
   ];
 
-  const operativeRows: Array<[string, string, boolean?]> = [
-    ['Duración calculada', duration, true],
-    ['Estado', 'Abierto · análisis en curso', true],
-    ['Evidencia', 'Foto o documento adjunto', true],
-    ['Responsable', `Asignado por rol · ${ex.area}`, true],
-    ['Historial', 'Cada cambio queda registrado', true],
-    ['Recurrencia', 'Se calcula al acumular registros', true],
+  const operativeRows: Array<[string, string]> = [
+    ['Duración calculada', duration],
+    ['Estado', 'Abierto · análisis en curso'],
+    ['Evidencia', 'Foto o documento adjunto'],
+    ['Responsable', `Asignado por rol · ${ex.area}`],
+    ['Historial', 'Cada cambio queda registrado'],
   ];
 
   return (
@@ -295,7 +232,7 @@ const Fp15Visual: React.FC = () => {
           <br />
           <strong>Pero ahora produce información.</strong>
         </p>
-        <SourceTag kind="example" detail="datos anonimizados" />
+        <SourceTag kind="anonymized" detail="estructura real, datos anonimizados" />
       </div>
 
       <div className="gd-fp15-compare">
@@ -332,190 +269,175 @@ const Fp15Visual: React.FC = () => {
           </dl>
         </section>
       </div>
-
-      <div className="gd-fp15-flow" aria-label="Lo que produce un FP-15 digital">
-        <span className="gd-fp15-flow-root">FP-15</span>
-        <span className="gd-fp15-flow-down" aria-hidden="true">↓</span>
-        <span className="gd-fp15-flow-data">Datos</span>
-        <ul>
-          {FP15_FLOW.map((node, i) => (
-            <li key={node.label} style={stagger(i + 8)} className={node.stage ? 'is-next' : ''}>
-              <span>{node.label}</span>
-              {node.stage && <StageTag>{node.stage}</StageTag>}
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 };
 
+const FP15_FLOW: Array<{ label: string; stage?: boolean }> = [
+  { label: 'Datos estructurados' },
+  { label: 'Duración' },
+  { label: 'Recurrencia' },
+  { label: 'Pareto' },
+  { label: 'No conformidad', stage: true },
+  { label: 'Acción', stage: true },
+  { label: 'KPI', stage: true },
+];
+
+const Fp15FlowVisual: React.FC = () => (
+  <div className="gd-fp15">
+    <div className="gd-fp15-headline">
+      <p>
+        De la captura a la decisión.
+        <br />
+        <strong>Primero los datos; después, las acciones.</strong>
+      </p>
+      <SourceTag kind="anonymized" detail="datos anonimizados" />
+    </div>
+    <div className="gd-fp15-flow" aria-label="Lo que produce un FP-15 digital">
+      <span className="gd-fp15-flow-root">FP-15-C</span>
+      <span className="gd-fp15-flow-down" aria-hidden="true">↓</span>
+      <ul>
+        {FP15_FLOW.map((node, i) => (
+          <li key={node.label} style={stagger(i)} className={node.stage ? 'is-next' : ''}>
+            <span>{node.label}</span>
+            {node.stage && <StageTag>Siguiente etapa</StageTag>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+);
+
 // ---------------------------------------------------------------------------
-// Paso 7 · Ciclo cerrado + inteligencia sobre evidencia
+// Escena 14 · Ciclo cerrado (vision)
 // ---------------------------------------------------------------------------
 
-const LOOP_SOURCES = ['Paro', 'Inspección', 'Queja', 'Proveedor'];
 const LOOP_CHAIN = [
+  'Evento',
   'No conformidad',
   'Contención',
-  'Análisis de causa',
-  'CAPA',
-  'Efectividad',
+  'Causa',
+  'Acción',
+  'Eficacia',
   'Riesgo',
   'KPI',
   'Revisión por la dirección',
+  'Mejora',
 ];
 
-const ClosedLoopVisual: React.FC<{ data: DemoData; onTryRealRag: () => void }> = ({ data, onTryRealRag }) => {
-  const rag = data.rag;
-  const ragOn = rag.state === 'ready' && rag.value.ragEnabled;
+const ClosedLoopVisual: React.FC = () => (
+  <div className="gd-loop gd-loop--single">
+    <ol className="gd-loop-chain gd-loop-chain--wide" aria-label="Ciclo cerrado de calidad">
+      {LOOP_CHAIN.map((node, i) => (
+        <li key={node} style={stagger(i)}>
+          <span className="gd-loop-index">{i + 1}</span>
+          <span>{node}</span>
+        </li>
+      ))}
+    </ol>
+    <p className="gd-vision-note">
+      Visión del producto. Este ciclo aún no está implementado; hoy existen los componentes base:
+      registros con estados, auditoría, workflow y notificaciones.
+    </p>
+  </div>
+);
 
-  return (
-    <div className="gd-loop">
-      <div className="gd-loop-diagram" aria-label="Ciclo cerrado de calidad">
-        <ul className="gd-loop-sources">
-          {LOOP_SOURCES.map((src, i) => (
-            <li key={src} style={stagger(i)}>{src}</li>
-          ))}
-        </ul>
-        <span className="gd-loop-down" aria-hidden="true">↓</span>
-        <ol className="gd-loop-chain">
-          {LOOP_CHAIN.map((node, i) => (
-            <li key={node} style={stagger(i + 4)}>
-              <span className="gd-loop-index">{i + 1}</span>
-              <span>{node}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <section className="gd-intel" aria-label="Inteligencia sobre evidencia">
-        <header>
-          <span className="gd-kicker">Inteligencia sobre evidencia</span>
-        </header>
-        <p className="gd-intel-question">“¿Por qué aumentaron los paros asociados a falta de material?”</p>
-        <p className="gd-intel-answer">
-          Se detectan eventos recurrentes relacionados con disponibilidad de material. La experiencia objetivo es que
-          GD-V2 pueda relacionar esos eventos con registros, análisis y acciones, citando siempre su evidencia.
-        </p>
-        <div className="gd-intel-foot">
-          <SourceTag kind="example" detail="respuesta fija, sin IA" />
-          {rag.state === 'ready' && (
-            ragOn ? (
-              <button type="button" className="gd-link-btn" onClick={onTryRealRag}>
-                Probar análisis real sobre un registro →
-              </button>
-            ) : (
-              <span className="gd-muted">Análisis con IA desactivado en este entorno. La demo no depende de él.</span>
-            )
-          )}
-        </div>
-      </section>
-    </div>
-  );
-};
+const ClosedLoopValueVisual: React.FC = () => (
+  <blockquote className="gd-quote">
+    <p>
+      ISO 9001 no termina al almacenar un documento.
+      <br />
+      <strong>El valor aparece cuando la evidencia, el problema, la acción y la mejora quedan conectados.</strong>
+    </p>
+  </blockquote>
+);
 
 // ---------------------------------------------------------------------------
-// Paso 8 · Plan
+// Escena 15 · Plan
 // ---------------------------------------------------------------------------
 
-const HORIZONS: Array<{ key: string; title: string; status: 'live' | 'next' | 'pilot' | 'vision'; items: string[] }> = [
+const HORIZONS: Array<{ key: string; title: string; status: 'live' | 'next' | 'vision'; tag: string; items: string[] }> = [
   {
     key: 'hoy',
     title: 'Hoy',
     status: 'live',
-    items: [
-      'Aplicación de escritorio',
-      'SQL Server',
-      'Seguridad endurecida',
-      'Documentación y workflow',
-      'Registros',
-      'Motor dinámico',
-      'FP-05-C',
-    ],
+    tag: 'Funciona hoy',
+    items: ['Control documental', 'Workflow', 'Seguridad', 'Trazabilidad', 'Registros dinámicos', 'FP-05-C'],
   },
   {
     key: 'siguiente',
     title: 'Siguiente',
     status: 'next',
-    items: ['SGC Mirror', 'Lista Maestra', 'Policy Engine', 'Revisión, retención y accesos'],
+    tag: 'Siguiente implementación',
+    items: ['Control documental v2', 'SGC Mirror / procesos', 'FP-15-C', 'NC + acciones', 'Riesgos', 'KPIs'],
   },
   {
-    key: 'piloto',
-    title: 'Piloto operativo',
-    status: 'pilot',
-    items: ['FP-15-C', 'Pareto y recurrencia', 'NC / CAPA', 'Riesgos', 'Indicadores'],
-  },
-  {
-    key: 'escala',
-    title: 'Escala',
+    key: 'despues',
+    title: 'Después',
     status: 'vision',
-    items: [
-      'Evidence Graph / Audit Room',
-      'Migration Factory',
-      'Quality Copilot',
-      'Conectores GSS / ERP',
-      'Más procesos y áreas',
-    ],
+    tag: 'Visión',
+    items: ['Auditorías', 'Revisión por Dirección', 'Evidence Graph', 'Quality Copilot', 'Integración Global Shop'],
   },
 ];
 
-const HORIZON_TAG: Record<'live' | 'next' | 'pilot' | 'vision', string> = {
-  live: 'Funciona hoy',
-  next: 'Siguiente implementación',
-  pilot: 'Siguiente implementación',
-  vision: 'Visión',
-};
-
 const RoadmapVisual: React.FC = () => (
-  <div className="gd-roadmap">
-    <ol className="gd-horizons">
-      {HORIZONS.map((h, i) => (
-        <li key={h.key} className={`gd-horizon gd-horizon--${h.status}`} style={stagger(i)}>
-          <header>
-            <span className="gd-horizon-step">{i + 1}</span>
-            <div>
-              <strong>{h.title}</strong>
-              <small>{HORIZON_TAG[h.status]}</small>
-            </div>
-          </header>
-          <ul>
-            {h.items.map(item => <li key={item}>{item}</li>)}
-          </ul>
-        </li>
-      ))}
-    </ol>
+  <ol className="gd-horizons gd-horizons--three">
+    {HORIZONS.map((h, i) => (
+      <li key={h.key} className={`gd-horizon gd-horizon--${h.status}`} style={stagger(i)}>
+        <header>
+          <span className="gd-horizon-step">{i + 1}</span>
+          <div>
+            <strong>{h.title}</strong>
+            <small>{h.tag}</small>
+          </div>
+        </header>
+        <ul>
+          {h.items.map(item => <li key={item}>{item}</li>)}
+        </ul>
+      </li>
+    ))}
+  </ol>
+);
 
-    <div className="gd-closing">
-      <div className="gd-closing-brand">
-        <DemoBrand size="sm" showTagline={false} />
-      </div>
-      <p className="gd-closing-message">
-        Tu Sistema de Gestión ya existe.
-        <br />
-        <strong>Nosotros lo hacemos operativo.</strong>
-      </p>
-      <p className="gd-closing-sub">Empezamos con procesos concretos, medimos el resultado y escalamos.</p>
-      <div className="gd-closing-cta" role="note">
-        <span>Siguiente paso</span>
-        <strong>Definir piloto Innovax</strong>
-      </div>
+const RoadmapCloseVisual: React.FC = () => (
+  <div className="gd-closing">
+    <div className="gd-closing-brand">
+      <DemoBrand size="sm" showTagline={false} />
+    </div>
+    <p className="gd-closing-message">
+      Tu Sistema de Gestión ya existe.
+      <br />
+      <strong>Nosotros lo hacemos operativo.</strong>
+    </p>
+    <p className="gd-closing-sub">Empezamos con procesos concretos, medimos el resultado y escalamos.</p>
+    <div className="gd-closing-cta" role="note">
+      <span>Siguiente paso</span>
+      <strong>Definir piloto Innovax</strong>
     </div>
   </div>
 );
 
 // ---------------------------------------------------------------------------
 
-const DemoPreview: React.FC<PreviewProps> = ({ visual, data, onNext, onTryRealRag }) => {
-  switch (visual) {
-    case 'sgc-context': return <ContextVisual onNext={onNext} />;
-    case 'sgc-mirror': return <MirrorVisual />;
-    case 'dashboard-live': return <DashboardLive data={data} />;
-    case 'docs-live': return <DocsLive data={data} />;
-    case 'dynamic-live': return <DynamicLive data={data} />;
+interface PreviewProps {
+  step: MicroStep;
+  data: DemoData;
+  onNext: () => void;
+}
+
+const DemoPreview: React.FC<PreviewProps> = ({ step, data, onNext }) => {
+  switch (step.visual) {
+    case 'intro': return <IntroVisual onNext={onNext} />;
+    case 'intro-promise': return <IntroPromiseVisual />;
+    case 'mirror': return <MirrorVisual />;
+    case 'field-origin': return <FieldOriginVisual data={data} step={step} />;
+    case 'record-lifecycle': return <RecordLifecycleVisual />;
     case 'fp15': return <Fp15Visual />;
-    case 'closed-loop': return <ClosedLoopVisual data={data} onTryRealRag={onTryRealRag} />;
+    case 'fp15-flow': return <Fp15FlowVisual />;
+    case 'closed-loop': return <ClosedLoopVisual />;
+    case 'closed-loop-value': return <ClosedLoopValueVisual />;
     case 'roadmap': return <RoadmapVisual />;
+    case 'roadmap-close': return <RoadmapCloseVisual />;
     default: return null;
   }
 };

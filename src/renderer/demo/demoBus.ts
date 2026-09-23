@@ -1,65 +1,87 @@
-// Canal minimo entre la Demo guiada y modulos que guardan su navegacion interna
-// en estado local (Registros -> pestana, Dynamic Records -> tipo de registro).
+// Canal entre la Demo guiada y los modulos reales de la aplicacion.
 //
-// La seccion principal NO pasa por aqui: la demo usa el mismo setSection de
-// App.tsx. Esto solo cubre la navegacion interna de modulos lazy.
+// La seccion principal NO pasa por aqui: la demo usa el mismo setSection del
+// Sidebar. El bus cubre acciones dentro de modulos que guardan su estado
+// localmente (abrir carpeta, abrir un dialogo, fijar la busqueda...).
 //
-// Semantica de "peticion pendiente": como los modulos se montan de forma
-// asincrona (React.lazy), la demo puede pedir una pestana antes de que el
-// modulo exista. La peticion queda guardada y el modulo la consume al montarse.
-// Sin peticiones pendientes, los modulos se comportan exactamente como antes.
+// Semantica:
+//  - Cada modulo registra un manejador para su espacio de nombres.
+//  - Si la demo envia un comando antes de que el modulo lazy se monte, el
+//    comando queda en cola y se entrega al registrarse el manejador.
+//  - execute() devuelve si la accion pudo completarse; nunca lanza hacia la
+//    demo: un fallo se traduce en "no disponible en este entorno".
+//  - Todo comando pasa la politica de solo lectura antes de entregarse.
+//
+// Sin comandos pendientes, los modulos se comportan exactamente igual que antes.
 
-type Channel = 'registros-tab' | 'record-type-code';
-type Listener = (value: string) => void;
+import { assertReadOnlyAction } from './actions/policy';
+import type { ReadOnlyActionKind } from './types';
 
-const pending: Record<Channel, string | null> = {
-  'registros-tab': null,
-  'record-type-code': null,
-};
+export type DemoNamespace = 'app' | 'documentacion' | 'registros' | 'dynamic';
 
-const listeners: Record<Channel, Set<Listener>> = {
-  'registros-tab': new Set(),
-  'record-type-code': new Set(),
-};
-
-function request(channel: Channel, value: string): void {
-  pending[channel] = value;
-  listeners[channel].forEach(listener => {
-    try {
-      listener(value);
-    } catch {
-      // Un listener defectuoso no debe romper la demo ni el modulo.
-    }
-  });
+export interface DemoCommand {
+  kind: ReadOnlyActionKind;
+  params?: Record<string, unknown>;
 }
 
-function consume(channel: Channel): string | null {
-  const value = pending[channel];
-  pending[channel] = null;
-  return value;
+export type DemoCommandHandler = (command: DemoCommand) => boolean | Promise<boolean>;
+
+interface Pending {
+  command: DemoCommand;
+  resolve: (ok: boolean) => void;
 }
 
-function subscribe(channel: Channel, listener: Listener): () => void {
-  listeners[channel].add(listener);
-  return () => {
-    listeners[channel].delete(listener);
-  };
+const handlers: Partial<Record<DemoNamespace, DemoCommandHandler>> = {};
+const queues: Record<DemoNamespace, Pending[]> = {
+  app: [],
+  documentacion: [],
+  registros: [],
+  dynamic: [],
+};
+
+async function deliver(handler: DemoCommandHandler, command: DemoCommand): Promise<boolean> {
+  try {
+    return Boolean(await handler(command));
+  } catch {
+    // Un manejador defectuoso no rompe la demo ni el modulo.
+    return false;
+  }
 }
 
 export const demoBus = {
-  /** Pide a Registros que muestre una pestana ('studio' | 'workflow' | 'dynamic'). */
-  requestRegistrosTab: (tab: string) => request('registros-tab', tab),
-  consumeRegistrosTab: () => consume('registros-tab'),
-  onRegistrosTab: (listener: Listener) => subscribe('registros-tab', listener),
+  /** Envia un comando de solo lectura a un modulo. */
+  execute(namespace: DemoNamespace, command: DemoCommand): Promise<boolean> {
+    assertReadOnlyAction(command.kind);
+    const handler = handlers[namespace];
+    if (handler) return deliver(handler, command);
+    return new Promise<boolean>(resolve => {
+      queues[namespace].push({ command, resolve });
+    });
+  },
 
-  /** Pide a Dynamic Records que seleccione un tipo por codigo (p. ej. 'FP-05-C'). Solo lectura. */
-  requestRecordTypeCode: (code: string) => request('record-type-code', code),
-  consumeRecordTypeCode: () => consume('record-type-code'),
-  onRecordTypeCode: (listener: Listener) => subscribe('record-type-code', listener),
+  /** Registra el manejador de un modulo y le entrega los comandos en cola. */
+  register(namespace: DemoNamespace, handler: DemoCommandHandler): () => void {
+    handlers[namespace] = handler;
+    const pending = queues[namespace].splice(0);
+    void (async () => {
+      for (const item of pending) {
+        item.resolve(await deliver(handler, item.command));
+      }
+    })();
+    return () => {
+      if (handlers[namespace] === handler) delete handlers[namespace];
+    };
+  },
 
-  /** Descarta peticiones pendientes al cerrar la demo. */
-  clear: () => {
-    pending['registros-tab'] = null;
-    pending['record-type-code'] = null;
+  /** Descarta los comandos en cola (al cerrar la demo). */
+  clear(): void {
+    (Object.keys(queues) as DemoNamespace[]).forEach(ns => {
+      queues[ns].splice(0).forEach(item => item.resolve(false));
+    });
+  },
+
+  /** Solo para pruebas: cuantos comandos esperan a un modulo. */
+  pendingCount(namespace: DemoNamespace): number {
+    return queues[namespace].length;
   },
 };

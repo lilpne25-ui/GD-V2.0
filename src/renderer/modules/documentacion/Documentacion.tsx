@@ -9,6 +9,9 @@ import './Documentacion.css';
 import { useDocumentTree } from './hooks/useDocumentTree';
 import { useDocumentPermissions } from './hooks/useDocumentPermissions';
 import { useWorkflow, WF_STATUS_LABEL } from './hooks/useWorkflow';
+import { demoBus } from '../../demo/demoBus';
+import type { DemoCommand } from '../../demo/demoBus';
+import { FORBIDDEN_DEMO_DOCUMENTS } from '../../demo/data/safeDocuments';
 
 type DocNodeType = 'folder' | 'file';
 
@@ -283,6 +286,48 @@ const findPath = (node: DocNode, id: string, path: DocNode[] = []): DocNode[] =>
   return [];
 };
 
+// --- Demo guiada: localizar nodos por nombre (solo lectura) -------------------
+
+const normalizeDemoName = (value: string): string =>
+  String(value || '').normalize('NFC').replace(/\s+/g, ' ').trim().toUpperCase();
+
+const stripExtension = (value: string): string => value.replace(/\.[a-z0-9]{2,5}$/i, '');
+
+const demoNameMatches = (node: DocNode, wanted: string): boolean => {
+  const name = normalizeDemoName(node.name);
+  const target = normalizeDemoName(wanted);
+  return name === target || stripExtension(name) === stripExtension(target);
+};
+
+const isForbiddenDemoDocument = (node: DocNode): boolean => {
+  const name = normalizeDemoName(node.name);
+  return FORBIDDEN_DEMO_DOCUMENTS.some(forbidden => name.includes(normalizeDemoName(forbidden)));
+};
+
+/** Resuelve una ruta de carpetas por nombre desde la raiz. */
+const findFolderByNamePath = (root: DocNode, names: string[]): DocNode | null => {
+  let current: DocNode = root;
+  for (const name of names) {
+    const next = current.children.find(child => child.type === 'folder' && demoNameMatches(child, name));
+    if (!next) return null;
+    current = next;
+  }
+  return current;
+};
+
+/** Primer nodo cuyo nombre coincide, buscando primero dentro de `preferred`. */
+const findNodeByName = (root: DocNode, name: string, preferred?: DocNode | null): DocNode | null => {
+  const walk = (node: DocNode): DocNode | null => {
+    if (node.id !== 'root' && demoNameMatches(node, name)) return node;
+    for (const child of node.children) {
+      const found = walk(child);
+      if (found) return found;
+    }
+    return null;
+  };
+  return (preferred ? walk(preferred) : null) || walk(root);
+};
+
 const collectDescendantIds = (node: DocNode): Set<string> => {
   const ids = new Set<string>();
   const walk = (current: DocNode) => {
@@ -416,6 +461,11 @@ const Documentacion: React.FC = () => {
   const [loadingTrash, setLoadingTrash] = useState(false);
   const [showAccessInfoDialog, setShowAccessInfoDialog] = useState(false);
   const [pendingExternalOpenNodeId, setPendingExternalOpenNodeId] = useState<string | null>(null);
+  // Demo guiada: anclas visuales y visores abiertos por la demo.
+  const [demoFocusNodeId, setDemoFocusNodeId] = useState<string | null>(null);
+  const [demoFocusFolderId, setDemoFocusFolderId] = useState<string | null>(null);
+  const demoViewerPopupsRef = useRef<Set<Window>>(new Set());
+  const demoCaptureViewerRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const activePreviewWindowsRef = useRef(0);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -1140,6 +1190,7 @@ const Documentacion: React.FC = () => {
       toast.error('No se pudo abrir la ventana de visualización. Revisa el bloqueo de ventanas emergentes.');
       return;
     }
+    if (demoCaptureViewerRef.current) demoViewerPopupsRef.current.add(popup);
 
     const sourceName = doc.fileName || doc.name || doc.id;
     const sourceNameLower = sourceName.toLowerCase();
@@ -1562,6 +1613,111 @@ const Documentacion: React.FC = () => {
     );
   };
 
+  // ── Demo guiada ─────────────────────────────────────────────────────
+  // Solo navegacion y lectura: abrir carpetas, filtrar, abrir el visor
+  // protegido y dialogos informativos. Nunca crea, mueve, aprueba ni borra.
+  const closeDemoViewers = () => {
+    demoViewerPopupsRef.current.forEach(popup => {
+      try {
+        if (!popup.closed) popup.close();
+      } catch {
+        // La ventana ya no existe.
+      }
+    });
+    demoViewerPopupsRef.current.clear();
+  };
+
+  const runDemoCommand = async (command: DemoCommand): Promise<boolean> => {
+    const params = command.params || {};
+    switch (command.kind) {
+      case 'doc.reset':
+        setSearch('');
+        setShowAccessInfoDialog(false);
+        setShowWorkflowPanel(false);
+        setDemoFocusNodeId(null);
+        setDemoFocusFolderId(null);
+        closeDemoViewers();
+        if (currentFolderId !== 'root') navigateTo('root');
+        return true;
+      case 'doc.openFolderPath': {
+        const names = Array.isArray(params.path) ? params.path.map(String) : [];
+        const folder = findFolderByNamePath(tree, names);
+        if (!folder) return false;
+        setSearch('');
+        const opened = await openNodeByIdFromExternal(folder.id, false);
+        if (opened) setDemoFocusFolderId(folder.id);
+        return opened;
+      }
+      case 'doc.focusNode': {
+        const node = findNodeByName(tree, String(params.name || ''), currentFolder);
+        if (!node || isForbiddenDemoDocument(node)) return false;
+        const path = findPath(tree, node.id);
+        const parent = path[path.length - 2];
+        if (parent && parent.id !== currentFolderId) navigateTo(parent.id);
+        setDemoFocusNodeId(node.id);
+        return true;
+      }
+      case 'doc.setSearch':
+        setSearch(String(params.text || ''));
+        return true;
+      case 'doc.clearSearch':
+        setSearch('');
+        return true;
+      case 'doc.openDocumentViewer': {
+        const node = findNodeByName(tree, String(params.name || ''), currentFolder);
+        if (!node || node.type !== 'file' || isForbiddenDemoDocument(node)) return false;
+        const before = demoViewerPopupsRef.current.size;
+        demoCaptureViewerRef.current = true;
+        try {
+          await viewDocumentFile(node);
+        } finally {
+          demoCaptureViewerRef.current = false;
+        }
+        return demoViewerPopupsRef.current.size > before;
+      }
+      case 'doc.closeDocumentViewers':
+        closeDemoViewers();
+        return true;
+      case 'doc.openAccessDialog':
+        setShowAccessInfoDialog(true);
+        return true;
+      case 'doc.closeAccessDialog':
+        setShowAccessInfoDialog(false);
+        return true;
+      case 'doc.openReviewInbox':
+        await loadPendingReview();
+        setShowWorkflowPanel(true);
+        return true;
+      case 'doc.closeReviewInbox':
+        setShowWorkflowPanel(false);
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  // Siempre la version del ultimo render (arbol y carpeta actuales).
+  const demoRunRef = useRef(runDemoCommand);
+  demoRunRef.current = runDemoCommand;
+  const demoTreeReadyRef = useRef(false);
+  demoTreeReadyRef.current = !isLoadingTree && tree.children.length > 0;
+
+  useEffect(() => {
+    const off = demoBus.register('documentacion', async command => {
+      // El comando puede llegar antes de que termine de cargar el arbol.
+      const startedAt = Date.now();
+      while (!demoTreeReadyRef.current) {
+        if (Date.now() - startedAt > 6000) return false;
+        await new Promise(resolve => window.setTimeout(resolve, 100));
+      }
+      return demoRunRef.current(command);
+    });
+    return () => {
+      off();
+      closeDemoViewers();
+    };
+  }, []);
+
   const closePreview = async () => {
     setPreviewDoc(null);
     setPreviewUrl('');
@@ -1635,6 +1791,7 @@ const Documentacion: React.FC = () => {
     return (
       <li key={node.id}>
         <div
+          data-demo-id={node.id === demoFocusFolderId ? 'doc-tree-focus' : undefined}
           className={`doc-tree-item doc-tree-level-${Math.min(level, 8)}${currentFolderId === node.id ? ' doc-tree-item--active' : ''}${dropTargetFolderId === node.id ? ' doc-tree-item--drop-target' : ''}`}
           onDragOver={(e) => {
             if (documentPerms.can_move_documents !== 1) return;
@@ -1790,6 +1947,7 @@ const Documentacion: React.FC = () => {
               className="doc-icon-btn"
               type="button"
               onClick={() => setShowAccessInfoDialog(true)}
+              data-demo-id="doc-access-btn"
               title="Ver puesto, usuario y permisos"
               aria-label="Ver información de acceso"
             >
@@ -1809,6 +1967,7 @@ const Documentacion: React.FC = () => {
               className="doc-icon-btn"
               type="button"
               onClick={() => { void loadPendingReview(); setShowWorkflowPanel(true); }}
+              data-demo-id="doc-review-btn"
               title="Bandeja de revisión"
               aria-label="Bandeja de revisión"
             >
@@ -1850,7 +2009,7 @@ const Documentacion: React.FC = () => {
         </div>
       </div>
 
-      <div className="doc-overview-strip">
+      <div className="doc-overview-strip" data-demo-id="doc-overview">
         <div className="doc-overview-card">
           <span className="doc-overview-label">Carpeta actual</span>
           <strong className="doc-overview-value">{currentFolder.name}</strong>
@@ -1875,7 +2034,7 @@ const Documentacion: React.FC = () => {
 
       {showAccessInfoDialog && (
         <div className="doc-dialog-overlay" role="dialog" aria-modal="true" aria-label="Información de acceso a Documentación">
-          <div className="doc-dialog-card doc-dialog-card--access-info">
+          <div className="doc-dialog-card doc-dialog-card--access-info" data-demo-id="doc-access-dialog">
             <h4 className="doc-dialog-title">
               <DocUiIcon name="info" className="doc-inline-icon" />
               <span>Informacion de acceso</span>
@@ -1896,7 +2055,7 @@ const Documentacion: React.FC = () => {
               {loadingPerms ? (
                 <p className="access-info-loading">Cargando permisos...</p>
               ) : (
-                <ul className="access-info-perm-list">
+                <ul className="access-info-perm-list" data-demo-id="doc-access-perms">
                   <li>Agregar documentos: <strong>{documentPerms.can_add_documents === 1 ? 'Sí' : 'No'}</strong></li>
                   <li>Eliminar documentos: <strong>{documentPerms.can_delete_documents === 1 ? 'Sí' : 'No'}</strong></li>
                   <li>Renombrar documentos: <strong>{documentPerms.can_rename_documents === 1 ? 'Sí' : 'No'}</strong></li>
@@ -1958,6 +2117,7 @@ const Documentacion: React.FC = () => {
               <input
                 className="filter-input"
                 placeholder="Buscar en esta carpeta..."
+                data-demo-id="doc-search"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -2019,6 +2179,7 @@ const Documentacion: React.FC = () => {
 
           <div
             ref={gridRef}
+            data-demo-id="doc-grid"
             className={`doc-grid ${viewMode === 'list' ? 'doc-grid--list' : ''} ${dragActive ? 'doc-grid--drag' : ''}`}
             onDragOver={(e) => {
               e.preventDefault();
@@ -2054,6 +2215,7 @@ const Documentacion: React.FC = () => {
               <article
                 key={item.id}
                 data-node-id={item.id}
+                data-demo-id={item.id === demoFocusNodeId ? 'doc-node-focus' : undefined}
                 className={`doc-card${(selectedNodeIds.has(item.id) || selectedNodeId === item.id) ? ' doc-card--selected' : ''}${dropTargetFolderId === item.id && item.type === 'folder' ? ' doc-card--drop-target' : ''}`}
                 draggable={item.id !== 'root' && documentPerms.can_move_documents === 1}
                 onDragStart={(e) => {
@@ -2513,12 +2675,12 @@ const Documentacion: React.FC = () => {
       {/* ===== Workflow Panel (documentos pendientes de revisión) ===== */}
       {showWorkflowPanel && (
         <div className="doc-dialog-overlay" role="dialog" aria-modal="true" aria-label="Documentos en workflow">
-          <div className="doc-dialog-card" style={{ maxWidth: 700, minHeight: 340 }}>
+          <div className="doc-dialog-card" style={{ maxWidth: 700, minHeight: 340 }} data-demo-id="doc-review-dialog">
             <h4 className="doc-dialog-title">
               <DocUiIcon name="workflow" className="doc-inline-icon" />
               <span>Bandeja de Revision de Documentos</span>
             </h4>
-            <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+            <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }} data-demo-id="doc-review-rule">
               Documentos enviados a revisión por los usuarios. Solo la Coordinadora SGC, Director o Admin pueden aprobar o solicitar correcciones.
             </p>
             {pendingReview.length === 0 ? (
@@ -2535,12 +2697,12 @@ const Documentacion: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {pendingReview.map(wf => (
-                      <tr key={wf.id}>
+                    {pendingReview.map((wf, wfIndex) => (
+                      <tr key={wf.id} data-demo-id={wfIndex === 0 ? 'doc-review-row' : undefined}>
                         <td>{wf.node_name || wf.node_id}</td>
                         <td>{wf.submitted_by_name || '—'}</td>
                         <td>{new Date(wf.created_at).toLocaleString('es-MX')}</td>
-                        <td style={{ display: 'flex', gap: 4 }}>
+                        <td style={{ display: 'flex', gap: 4 }} data-demo-id={wfIndex === 0 ? 'doc-review-actions' : undefined}>
                           <button className="btn btn-sm btn-secondary" onClick={() => {
                             void openNodeByIdFromExternal(wf.node_id, true);
                             setShowWorkflowPanel(false);

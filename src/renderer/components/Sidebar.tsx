@@ -1,6 +1,7 @@
 import React from 'react';
 import SgcIcon from './SgcIcon';
 import type { SgcIconName } from './SgcIcon';
+import { isPrototypeSection } from './prototypeSections';
 import './Sidebar.css';
 
 type SidebarProps = {
@@ -63,12 +64,16 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onSelect }) => (
                 className={`sidebar-item${active === section.id ? ' sidebar-item--active' : ''}`}
                 onClick={() => onSelect(section.id)}
                 data-demo-id={`sidebar-${section.id}`}
-                aria-label={section.label}
+                aria-label={isPrototypeSection(section.id) ? `${section.label} (prototipo)` : section.label}
+                title={isPrototypeSection(section.id) ? 'Prototipo de pantalla · Siguiente implementación' : undefined}
                 aria-current={active === section.id ? 'page' : undefined}
               >
                 <span className="sidebar-item-indicator" aria-hidden="true" />
                 <SgcIcon name={section.icon} size="lg" className="sidebar-icon" />
                 <span className="sidebar-label">{section.label}</span>
+                {isPrototypeSection(section.id) && (
+                  <span className="sidebar-proto-badge" aria-hidden="true">Prototipo</span>
+                )}
               </button>
             ))}
           </div>

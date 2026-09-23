@@ -91,18 +91,19 @@ const Registros: React.FC = () => {
 
   // Demo guiada: puede pedir una pestana antes o despues de que este modulo
   // se monte. Solo se aceptan pestanas validas; 'dynamic' exige el flag activo.
-  useEffect(() => {
-    const applyTab = (requested: string | null) => {
-      if (requested === 'studio' || requested === 'workflow') {
-        setRegMainTab(requested);
-      } else if (requested === 'dynamic' && dynamicRecordsEnabled) {
-        setRegMainTab('dynamic');
-      }
-    };
-
-    applyTab(demoBus.consumeRegistrosTab());
-    return demoBus.onRegistrosTab(() => applyTab(demoBus.consumeRegistrosTab()));
-  }, [dynamicRecordsEnabled]);
+  useEffect(() => demoBus.register('registros', command => {
+    if (command.kind !== 'registros.setTab') return false;
+    const requested = String(command.params?.tab || '');
+    if (requested === 'studio' || requested === 'workflow') {
+      setRegMainTab(requested);
+      return true;
+    }
+    if (requested === 'dynamic' && dynamicRecordsEnabled) {
+      setRegMainTab('dynamic');
+      return true;
+    }
+    return false;
+  }), [dynamicRecordsEnabled]);
   const [wfDocs, setWfDocs] = useState<WfDocItem[]>([]);
   const [wfSelectedDoc, setWfSelectedDoc] = useState<WfDocItem | null>(null);
   const [wfCorrections, setWfCorrections] = useState<WfCorreccion[]>([]);
