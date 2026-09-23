@@ -18,6 +18,7 @@ import type {
   RagStatusResult,
 } from '../../../../shared/types/rag';
 import DynamicRecordForm from './DynamicRecordForm';
+import { demoBus } from '../../../demo/demoBus';
 
 type RecordEditMode = 'new' | 'edit';
 
@@ -62,7 +63,14 @@ function resolveActor(): SessionUser {
   };
 
   try {
-    const raw = localStorage.getItem('sgc_session') || localStorage.getItem('session_user') || localStorage.getItem('auth_user');
+    // 'sgc.currentUser' es el espejo visual que escribe AuthContext tras el
+    // login. Solo se usa para mostrar el nombre en campos automaticos
+    // (@@actor.name): la identidad que se guarda la decide el proceso main a
+    // partir de la sesion (withSessionActor), no este valor.
+    const raw = localStorage.getItem('sgc.currentUser')
+      || localStorage.getItem('sgc_session')
+      || localStorage.getItem('session_user')
+      || localStorage.getItem('auth_user');
     if (!raw) return fallback;
 
     const parsed = JSON.parse(raw) as {
@@ -285,6 +293,28 @@ const DynamicRecordsPanel: React.FC = () => {
       setLoadingTypes(false);
     }
   }, []);
+
+  // Demo guiada: seleccion de un tipo por codigo (p. ej. FP-05-C). Solo cambia
+  // la seleccion visible; no crea ni modifica registros. Sin peticion
+  // pendiente, el panel se comporta exactamente igual que antes.
+  const [requestedTypeCode, setRequestedTypeCode] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const pendingCode = demoBus.consumeRecordTypeCode();
+    if (pendingCode) setRequestedTypeCode(pendingCode);
+    return demoBus.onRecordTypeCode(() => {
+      const code = demoBus.consumeRecordTypeCode();
+      if (code) setRequestedTypeCode(code);
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (!requestedTypeCode || recordTypes.length === 0) return;
+    const wanted = requestedTypeCode.trim().toUpperCase();
+    const match = recordTypes.find(type => String(type.code || '').trim().toUpperCase() === wanted);
+    if (match) setSelectedTypeId(match.id);
+    setRequestedTypeCode(null);
+  }, [requestedTypeCode, recordTypes]);
 
   const handleImportFp05 = React.useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -716,7 +746,7 @@ const DynamicRecordsPanel: React.FC = () => {
 
   if (loadingTypes) {
     return (
-      <div className="dr-shell">
+      <div className="dr-shell" data-demo-id="dynamic-records-root">
         <EmptyState
           icon="clock"
           title="Cargando tipos de registro"
@@ -728,7 +758,7 @@ const DynamicRecordsPanel: React.FC = () => {
 
   if (!recordTypes.length) {
     return (
-      <div className="dr-shell">
+      <div className="dr-shell" data-demo-id="dynamic-records-root">
         <EmptyState
           icon="registry"
           title="Motor dinamico sin tipos configurados"
@@ -739,14 +769,14 @@ const DynamicRecordsPanel: React.FC = () => {
   }
 
   return (
-    <div className="dr-shell" aria-label="Registros dinamicos beta">
+    <div className="dr-shell" aria-label="Registros dinamicos beta" data-demo-id="dynamic-records-root">
       <aside className="dr-sidebar" aria-label="Lista de registros">
         <div className="dr-sidebar-header">
           <h3>Registros Dinamicos</h3>
           <span>BETA</span>
         </div>
 
-        <label className="dr-type-picker" htmlFor="dr-type-picker">
+        <label className="dr-type-picker" htmlFor="dr-type-picker" data-demo-id="dynamic-type-picker">
           <span>Tipo de registro</span>
           <select
             id="dr-type-picker"
@@ -770,6 +800,7 @@ const DynamicRecordsPanel: React.FC = () => {
             className="btn btn-secondary btn-sm"
             onClick={triggerFp05Import}
             disabled={importingExcel}
+            data-demo-id="dynamic-fp05-import"
           >
             {importingExcel ? 'Importando...' : 'Importar FP-05'}
           </button>
@@ -825,7 +856,7 @@ const DynamicRecordsPanel: React.FC = () => {
         </div>
       </aside>
 
-      <section className="dr-main" aria-label="Detalle del registro dinamico">
+      <section className="dr-main" aria-label="Detalle del registro dinamico" data-demo-id="dynamic-record-form">
         {loadingDefinition ? (
           <EmptyState
             icon="clock"

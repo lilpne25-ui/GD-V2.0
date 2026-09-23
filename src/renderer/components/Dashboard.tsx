@@ -135,7 +135,7 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <main className="dash">
+    <main className="dash" data-demo-id="dashboard-root">
       <section className="dash-hero">
         <div className="dash-header">
           <span className="dash-eyebrow">Visión general</span>
@@ -152,7 +152,7 @@ const Dashboard: React.FC = () => {
         </div>
       </section>
 
-      <div className="dash-grid">
+      <div className="dash-grid" data-demo-id="dashboard-kpis">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="dash-card">
@@ -207,7 +207,7 @@ const Dashboard: React.FC = () => {
           </div>
         </section>
 
-        <section className="dash-section dash-section--activity">
+        <section className="dash-section dash-section--activity" data-demo-id="dashboard-audit">
           <div className="dash-section-head">
             <div>
               <span className="dash-section-kicker">Trazabilidad</span>

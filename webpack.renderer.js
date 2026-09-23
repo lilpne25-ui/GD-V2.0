@@ -47,6 +47,15 @@ module.exports = (_env, argv = {}) => {
           test: /\.css$/,
           use: ['style-loader', 'css-loader'],
         },
+        {
+          // Assets de marca (logo Innovax de la Demo guiada). Se incrustan como
+          // data URI para que funcionen igual con webpack-dev-server y con el
+          // index.html cargado por file:// en la app empaquetada. Solo aplica a
+          // src/renderer/assets y queda en el chunk lazy de la demo.
+          test: /\.(png|jpe?g|svg)$/i,
+          include: path.resolve(__dirname, 'src/renderer/assets'),
+          type: 'asset/inline',
+        },
       ],
     },
     optimization: {

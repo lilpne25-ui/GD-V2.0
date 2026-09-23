@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './Registros.css';
 import { toast } from '../../components/Toast';
 import EmptyState from '../../components/EmptyState';
@@ -12,6 +12,7 @@ import DynamicRecordsPanel, { isDynamicRecordsFeatureEnabled } from './component
 import { useRegistrosStorage } from './hooks/useRegistrosStorage';
 import { colToLabel, useSheetEngine } from './hooks/useSheetEngine';
 import { useDocumentacionSave } from './hooks/useDocumentacionSave';
+import { demoBus } from '../../demo/demoBus';
 
 type DocxInteropModule = typeof import('./docxInterop');
 
@@ -87,6 +88,21 @@ const Registros: React.FC = () => {
   const dynamicRecordsEnabled = useMemo(() => isDynamicRecordsFeatureEnabled(), []);
 
   const [regMainTab, setRegMainTab] = useState<RegistrosMainTab>('studio');
+
+  // Demo guiada: puede pedir una pestana antes o despues de que este modulo
+  // se monte. Solo se aceptan pestanas validas; 'dynamic' exige el flag activo.
+  useEffect(() => {
+    const applyTab = (requested: string | null) => {
+      if (requested === 'studio' || requested === 'workflow') {
+        setRegMainTab(requested);
+      } else if (requested === 'dynamic' && dynamicRecordsEnabled) {
+        setRegMainTab('dynamic');
+      }
+    };
+
+    applyTab(demoBus.consumeRegistrosTab());
+    return demoBus.onRegistrosTab(() => applyTab(demoBus.consumeRegistrosTab()));
+  }, [dynamicRecordsEnabled]);
   const [wfDocs, setWfDocs] = useState<WfDocItem[]>([]);
   const [wfSelectedDoc, setWfSelectedDoc] = useState<WfDocItem | null>(null);
   const [wfCorrections, setWfCorrections] = useState<WfCorreccion[]>([]);
@@ -221,7 +237,7 @@ const Registros: React.FC = () => {
   };
 
   return (
-    <div className="mod-registros">
+    <div className="mod-registros" data-demo-id="registros-root">
       <div className="mod-header">
         <div>
           <h2 className="mod-title">Registros Studio</h2>
@@ -229,7 +245,7 @@ const Registros: React.FC = () => {
         </div>
       </div>
 
-      <div className="mod-tabs reg-main-tabs">
+      <div className="mod-tabs reg-main-tabs" data-demo-id="registros-tabs">
         <button className={`mod-tab ${regMainTab === 'studio' ? 'active' : ''}`} onClick={() => setRegMainTab('studio')}>
           📊 Registros Studio
         </button>
@@ -243,6 +259,7 @@ const Registros: React.FC = () => {
           <button
             className={`mod-tab ${regMainTab === 'dynamic' ? 'active' : ''}`}
             onClick={() => setRegMainTab('dynamic')}
+            data-demo-id="dynamic-records-tab"
           >
             🧩 Registros Dinamicos (BETA)
           </button>

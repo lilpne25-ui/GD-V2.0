@@ -62,6 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onSelect }) => (
                 type="button"
                 className={`sidebar-item${active === section.id ? ' sidebar-item--active' : ''}`}
                 onClick={() => onSelect(section.id)}
+                data-demo-id={`sidebar-${section.id}`}
                 aria-label={section.label}
                 aria-current={active === section.id ? 'page' : undefined}
               >

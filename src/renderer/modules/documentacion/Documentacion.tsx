@@ -1766,7 +1766,7 @@ const Documentacion: React.FC = () => {
 
   /* ============ RENDER ============ */
   return (
-    <div className="mod-documentacion">
+    <div className="mod-documentacion" data-demo-id="documentacion-root">
       <input
         ref={fileInputRef}
         type="file"
@@ -1914,12 +1914,12 @@ const Documentacion: React.FC = () => {
       )}
 
       <div className="doc-layout">
-        <aside className="doc-sidebar">
+        <aside className="doc-sidebar" data-demo-id="documentacion-tree">
           <div className="doc-sidebar-title">Estructura</div>
           <ul className="doc-tree-list">{renderFolderTree(tree)}</ul>
         </aside>
 
-        <section className="doc-main">
+        <section className="doc-main" data-demo-id="documentacion-main">
           <div className="doc-toolbar">
             <div className="doc-breadcrumbs">
               <button

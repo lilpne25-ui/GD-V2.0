@@ -1,0 +1,48 @@
+/*
+ * Tokens de color Innovax.
+ *
+ * Fuente: "INNOVAX_guia_cromatica_estilo_pantone.pdf" (Guia de color 2026).
+ * La propia guia indica que la paleta se extrajo visualmente del logotipo PNG
+ * entregado; no es un manual de marca vectorial. Si Innovax entrega un manual
+ * oficial (AI/SVG/PDF), sustituir aqui los valores y solo aqui.
+ *
+ * Regla: ningun componente debe escribir estos HEX directamente. Usar siempre
+ * las variables semanticas de la segunda seccion.
+ *
+ * Alcance: solo se cargan con la Demo guiada. No alteran el tema de GD-V2.
+ */
+
+:root {
+  /* --- Carta cromatica (valores literales de la guia) --- */
+  --innovax-chocolate: #1f130f;   /* Color principal */
+  --innovax-amarillo: #fdd000;    /* Acento principal */
+  --innovax-oro-luminoso: #f0bb09;/* Brillo metalico */
+  --innovax-oro-medio: #bf7a08;   /* Tono metalico */
+  --innovax-bronce: #7b4114;      /* Sombra metalica */
+  --innovax-marfil: #fdfbf8;      /* Fondo / contraste */
+
+  /* --- Roles semanticos (lo que consumen los componentes) --- */
+  --innovax-primary: var(--innovax-chocolate);
+  --innovax-accent: var(--innovax-amarillo);
+  --innovax-accent-metal: var(--innovax-oro-luminoso);
+  /* Texto de acento sobre fondo claro: el amarillo no alcanza contraste
+     suficiente sobre marfil/blanco, el bronce si. */
+  --innovax-accent-text: var(--innovax-bronce);
+  --innovax-surface: var(--innovax-marfil);
+  --innovax-text: var(--innovax-chocolate);
+  /* Derivado por opacidad del color principal; no introduce un tono nuevo. */
+  --innovax-muted: rgba(31, 19, 15, 0.66);
+  --innovax-border: rgba(31, 19, 15, 0.12);
+  --innovax-backdrop: rgba(31, 19, 15, 0.58);
+  --innovax-accent-soft: rgba(253, 208, 0, 0.18);
+  --innovax-shadow-sm: 0 8px 18px rgba(31, 19, 15, 0.16);
+  --innovax-shadow-md: 0 12px 24px rgba(31, 19, 15, 0.26);
+  --innovax-shadow-lg: 0 30px 80px rgba(31, 19, 15, 0.32);
+
+  /* Degradado metalico sutil, en el mismo orden luz -> sombra de la guia. */
+  --innovax-metal-gradient: linear-gradient(
+    90deg,
+    var(--innovax-oro-luminoso) 0%,
+    var(--innovax-oro-medio) 100%
+  );
+}

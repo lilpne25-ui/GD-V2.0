@@ -1,0 +1,1302 @@
+/*
+ * Demo guiada Innovax.
+ *
+ * Colores:
+ *  - Marca (acento, spotlight, progreso, CTA): tokens --innovax-*.
+ *  - Estados funcionales (hoy / siguiente / vision): tokens --color-* de GD-V2.
+ *    Un color corporativo nunca se usa como exito, aviso o error.
+ *
+ * Animaciones: solo opacity y transform, desactivadas con reduced-motion.
+ */
+
+.gd-root {
+  --gd-z: 1250; /* por encima del menu contextual (1200), por debajo de toasts (1300) */
+  --gd-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  font-family: var(--font-sans);
+  color: var(--innovax-text);
+}
+
+/* Capas de fondo: nunca interceptan clics. La app sigue usable debajo. */
+.gd-dim,
+.gd-spot {
+  position: fixed;
+  z-index: var(--gd-z);
+  pointer-events: none;
+}
+
+.gd-dim {
+  inset: 0;
+  background: var(--innovax-backdrop);
+  animation: gd-fade 0.3s ease both;
+}
+
+.gd-spot {
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 2px var(--innovax-accent),
+    0 0 0 8px var(--innovax-accent-soft),
+    0 0 0 9999px var(--innovax-backdrop);
+  transition:
+    top 0.45s var(--gd-ease),
+    left 0.45s var(--gd-ease),
+    width 0.45s var(--gd-ease),
+    height 0.45s var(--gd-ease);
+}
+
+.gd-spot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid var(--innovax-accent);
+  opacity: 0;
+  animation: gd-pulse 2.6s ease-out infinite;
+}
+
+/* ---------------------------------------------------------------- Panel --- */
+
+.gd-panel {
+  position: fixed;
+  z-index: calc(var(--gd-z) + 1);
+  display: flex;
+  flex-direction: column;
+  background: var(--innovax-surface);
+  border: 1px solid var(--innovax-border);
+  border-top: 3px solid var(--innovax-accent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--innovax-shadow-lg);
+  outline: none;
+  animation: gd-panel-in 0.35s var(--gd-ease) both;
+}
+
+.gd-panel--stage {
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(1080px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+}
+
+.gd-panel--dock {
+  /* top/bottom/left/right se calculan en GuidedDemo para no tapar el spotlight. */
+  width: min(390px, calc(100vw - 32px));
+  max-height: calc(100vh - 92px);
+}
+
+.gd-panel--dock .gd-head { padding: 10px 14px 8px; }
+.gd-panel--dock .gd-body { padding: 12px 16px 6px; }
+.gd-panel--dock .gd-title { font-size: 18px; }
+.gd-panel--dock .gd-message { margin: 6px 0 10px; font-size: 13.5px; }
+.gd-panel--dock .gd-foot { padding: 8px 14px 10px; }
+
+.gd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 12px 16px 10px;
+}
+
+.gd-head-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.gd-counter {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--innovax-muted);
+  white-space: nowrap;
+}
+
+.gd-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--innovax-border);
+  background: transparent;
+  color: var(--innovax-text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.gd-icon-btn:hover { background: var(--innovax-accent-soft); }
+
+.gd-progress {
+  height: 3px;
+  margin: 0 16px;
+  border-radius: 999px;
+  background: var(--innovax-border);
+  overflow: hidden;
+}
+
+.gd-progress-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--innovax-metal-gradient);
+  transition: width 0.45s var(--gd-ease);
+}
+
+.gd-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 20px 8px;
+}
+
+.gd-panel--stage .gd-body { padding: 20px 28px 12px; }
+
+.gd-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--innovax-text);
+}
+
+.gd-panel--stage .gd-title { font-size: 26px; }
+
+.gd-message {
+  margin: 8px 0 14px;
+  max-width: 72ch;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--innovax-muted);
+}
+
+.gd-panel--stage .gd-message { font-size: 15px; }
+
+.gd-muted {
+  margin: 8px 0;
+  font-size: 12.5px;
+  color: var(--innovax-muted);
+}
+
+.gd-hint {
+  margin: 12px 0 4px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--innovax-accent);
+  background: var(--color-surface-solid);
+  border-radius: 0 8px 8px 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--innovax-muted);
+}
+
+.gd-env-notice {
+  margin: 10px 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.gd-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Chips de foco dentro de un paso con varios elementos. */
+.gd-focus-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.gd-focus-chip {
+  border: 1px solid var(--innovax-border);
+  background: var(--color-surface-solid);
+  color: var(--innovax-muted);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gd-focus-chip.is-active {
+  background: var(--innovax-primary);
+  border-color: var(--innovax-primary);
+  color: var(--innovax-surface);
+}
+
+/* ----------------------------------------------------------- Controles --- */
+
+.gd-foot {
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--innovax-border);
+}
+
+.gd-autostop {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--innovax-accent-text);
+}
+
+.gd-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.gd-btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.gd-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.gd-btn:hover:not(:disabled) { transform: translateY(-1px); }
+
+.gd-btn--primary {
+  margin-left: auto;
+  background: var(--innovax-primary);
+  color: var(--innovax-surface);
+}
+
+.gd-btn--ghost {
+  background: transparent;
+  border-color: var(--innovax-border);
+  color: var(--innovax-text);
+}
+
+.gd-btn--ghost[aria-pressed='true'] {
+  background: var(--innovax-accent-soft);
+  border-color: var(--innovax-accent);
+}
+
+.gd-btn--quiet {
+  background: transparent;
+  color: var(--innovax-muted);
+}
+
+.gd-panel button:focus-visible {
+  outline: 2px solid var(--innovax-accent);
+  outline-offset: 2px;
+}
+
+/* El panel recibe foco para accesibilidad; su contorno distraeria en pantalla. */
+.gd-panel:focus,
+.gd-panel:focus-visible {
+  outline: none;
+}
+
+.gd-shortcuts {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--innovax-muted);
+}
+
+.gd-shortcuts kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 5px;
+  border: 1px solid var(--innovax-border);
+  border-radius: 5px;
+  background: var(--color-surface-solid);
+  font: inherit;
+  font-size: 10.5px;
+  text-align: center;
+}
+
+/* --------------------------------------------------------- Co-branding --- */
+
+.gd-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* El logo JPG tiene fondo blanco: siempre sobre tarjeta blanca con margen. */
+.gd-logo-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-solid);
+  border: 1px solid var(--innovax-border);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.gd-logo-card--sm { height: 34px; padding: 2px 6px; }
+.gd-logo-card--md { height: 52px; padding: 4px 10px; }
+.gd-logo-card--lg { height: 96px; padding: 6px 16px; border-radius: 14px; }
+
+.gd-logo-img {
+  display: block;
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+  user-select: none;
+}
+
+.gd-logo-fallback {
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--innovax-text);
+}
+
+.gd-brand-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--innovax-border);
+}
+
+.gd-brand-product {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.gd-brand-product strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--innovax-text);
+}
+
+.gd-brand-product span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--innovax-muted);
+}
+
+.gd-brand-product em {
+  margin-top: 6px;
+  font-style: normal;
+  font-size: 13px;
+  color: var(--innovax-muted);
+}
+
+.gd-brand--lg .gd-brand-product strong { font-size: 24px; letter-spacing: -0.02em; }
+.gd-brand--lg .gd-brand-product span { font-size: 14px; }
+.gd-brand--lg { gap: 20px; }
+
+/* ------------------------------------------------ Estado y origen datos --- */
+
+.gd-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.gd-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* Funciona hoy: color funcional de exito de GD-V2. */
+.gd-status--live {
+  color: var(--color-success);
+  background: var(--color-surface-solid);
+  border-color: var(--color-success);
+}
+
+/* Siguiente implementacion: color informativo de GD-V2. */
+.gd-status--next {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+/* Vision: neutro y discontinuo, para leerse como "no construido". */
+.gd-status--vision {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
+  border: 1px dashed var(--color-text-secondary);
+}
+
+/* Contexto y plan hablan de Innovax: aqui si corresponde la marca. */
+.gd-status--context {
+  color: var(--innovax-accent-text);
+  background: var(--innovax-accent-soft);
+  border-color: var(--innovax-accent);
+}
+
+.gd-status--plan {
+  color: var(--innovax-surface);
+  background: var(--innovax-primary);
+}
+
+.gd-status--plan .gd-status-dot { background: var(--innovax-accent); }
+
+.gd-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.gd-source small {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.85;
+}
+
+.gd-source--system {
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+  background: var(--color-surface-solid);
+}
+
+.gd-source--example {
+  color: var(--color-text-secondary);
+  border: 1px dashed var(--color-text-secondary);
+  background: var(--color-surface-solid);
+}
+
+.gd-source--innovax {
+  color: var(--innovax-accent-text);
+  border: 1px solid var(--innovax-accent);
+  background: var(--innovax-accent-soft);
+}
+
+.gd-stage-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.gd-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--innovax-accent-text);
+}
+
+.gd-config-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--innovax-primary);
+  color: var(--innovax-surface);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gd-link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--innovax-accent-text);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ------------------------------------------------ Paso 1 · Contexto ------- */
+
+.gd-context {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 4px 0 8px;
+}
+
+.gd-context-brand {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--innovax-border);
+}
+
+.gd-context-hero {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px 36px;
+}
+
+.gd-context-number {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gd-context-number strong {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--innovax-text);
+}
+
+.gd-context-number > span {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--innovax-muted);
+}
+
+.gd-context-flow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-flow-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gd-flow-arrow {
+  color: var(--innovax-accent-text);
+  font-weight: 800;
+}
+
+.gd-flow-pill {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--innovax-border);
+  background: var(--color-surface-solid);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gd-flow-pill--origin {
+  background: var(--innovax-primary);
+  border-color: var(--innovax-primary);
+  color: var(--innovax-surface);
+}
+
+.gd-context-fields-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--innovax-muted);
+}
+
+.gd-context-fields ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-context-fields li {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--innovax-accent-soft);
+  color: var(--innovax-accent-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gd-cta {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 12px;
+  background: var(--innovax-primary);
+  color: var(--innovax-surface);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--innovax-shadow-sm);
+}
+
+.gd-cta span { color: var(--innovax-accent); }
+
+/* ------------------------------------------------ Paso 2 · Mirror --------- */
+
+.gd-mirror {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.gd-mirror-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--innovax-border);
+  background: var(--color-surface-solid);
+}
+
+.gd-mirror-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.gd-mirror-card--rules {
+  border-left: 3px solid var(--innovax-accent);
+}
+
+.gd-mirror-table { margin: 0; }
+
+.gd-mirror-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--innovax-border);
+  font-size: 13px;
+}
+
+.gd-mirror-row dt { font-weight: 700; color: var(--innovax-muted); }
+.gd-mirror-row dd { margin: 0; font-weight: 600; }
+
+.gd-mirror-bridge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--innovax-accent-text);
+}
+
+.gd-mirror-bridge-line {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  background: var(--innovax-metal-gradient);
+  border-radius: 999px;
+}
+
+.gd-mirror-bridge-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.gd-mirror-bridge-arrow {
+  font-size: 18px;
+  transform: rotate(-90deg);
+}
+
+.gd-mirror-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-mirror-rules li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--innovax-surface);
+}
+
+.gd-mirror-rules small {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--innovax-muted);
+}
+
+.gd-mirror-from { font-weight: 700; color: var(--innovax-muted); }
+.gd-mirror-arrow { color: var(--innovax-accent-text); font-weight: 800; }
+.gd-mirror-to { font-weight: 800; }
+
+.gd-mirror-codes {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--innovax-muted);
+}
+
+.gd-mirror-codes code,
+.gd-fp15-col code {
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--innovax-primary);
+  color: var(--innovax-accent);
+  font-family: 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* --------------------------------------- Pasos 3-5 · Panel en vivo -------- */
+
+.gd-live {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.gd-live-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.gd-live-line {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--innovax-text);
+}
+
+.gd-live-line strong { font-weight: 800; }
+
+.gd-checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.gd-checklist li::before {
+  content: '✓';
+  margin-right: 8px;
+  color: var(--color-success);
+  font-weight: 800;
+}
+
+.gd-fields {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gd-fields li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--innovax-border);
+  background: var(--color-surface-solid);
+  font-size: 13px;
+}
+
+.gd-fields li span {
+  color: var(--innovax-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+/* ------------------------------------------------ Paso 6 · FP-15-C -------- */
+
+.gd-fp15 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gd-fp15-headline {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gd-fp15-headline p {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+  color: var(--innovax-muted);
+}
+
+.gd-fp15-headline strong { color: var(--innovax-text); }
+
+.gd-fp15-compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.gd-fp15-col {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--innovax-border);
+  background: var(--color-surface-solid);
+}
+
+.gd-fp15-col header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.gd-fp15-col--gd {
+  border-left: 3px solid var(--innovax-accent);
+}
+
+.gd-fp15-col dl { margin: 0; }
+
+.gd-fp15-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--innovax-border);
+  font-size: 13px;
+}
+
+.gd-fp15-row dt { font-weight: 700; color: var(--innovax-muted); }
+.gd-fp15-row dd { margin: 0; font-weight: 600; }
+
+.gd-fp15-row--added dd { color: var(--innovax-text); }
+.gd-fp15-row--added dt::before {
+  content: '+ ';
+  color: var(--innovax-accent-text);
+  font-weight: 800;
+}
+
+.gd-fp15-comment {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--innovax-muted);
+}
+
+.gd-fp15-same {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  color: var(--innovax-muted);
+}
+
+.gd-fp15-arrow {
+  align-self: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--innovax-accent-text);
+}
+
+.gd-fp15-flow {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--innovax-primary);
+  color: var(--innovax-surface);
+}
+
+.gd-fp15-flow-root,
+.gd-fp15-flow-data {
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.gd-fp15-flow-root { background: var(--innovax-accent); color: var(--innovax-primary); }
+.gd-fp15-flow-data { border: 1px solid var(--innovax-accent); color: var(--innovax-accent); }
+
+.gd-fp15-flow-down {
+  color: var(--innovax-accent);
+  transform: rotate(-90deg);
+  font-weight: 800;
+}
+
+.gd-fp15-flow ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-fp15-flow li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--color-surface-solid);
+  color: var(--innovax-text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.gd-fp15-flow li.is-next {
+  background: transparent;
+  border: 1px dashed var(--innovax-surface);
+  color: var(--innovax-surface);
+}
+
+/* ------------------------------------------ Paso 7 · Ciclo cerrado -------- */
+
+.gd-loop {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.gd-loop-diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.gd-loop-sources {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-loop-sources li {
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: var(--innovax-primary);
+  color: var(--innovax-surface);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gd-loop-down {
+  text-align: center;
+  font-weight: 800;
+  color: var(--innovax-accent-text);
+}
+
+.gd-loop-chain {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.gd-loop-chain li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 70px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--innovax-border);
+  background: var(--color-surface-solid);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.gd-loop-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--innovax-accent);
+  color: var(--innovax-primary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.gd-loop-chain li:last-child {
+  background: var(--innovax-primary);
+  color: var(--innovax-surface);
+  border-color: var(--innovax-primary);
+}
+
+.gd-intel {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--innovax-border);
+  border-left: 3px solid var(--innovax-bronce);
+  background: var(--color-surface-solid);
+}
+
+.gd-intel-question {
+  margin: 10px 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.gd-intel-answer {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--innovax-muted);
+}
+
+.gd-intel-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* ------------------------------------------------ Paso 8 · Plan ----------- */
+
+.gd-roadmap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.gd-horizons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-horizon {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--innovax-border);
+  border-top-width: 3px;
+  background: var(--color-surface-solid);
+}
+
+.gd-horizon--live { border-top-color: var(--color-success); }
+.gd-horizon--next,
+.gd-horizon--pilot { border-top-color: var(--color-primary); }
+.gd-horizon--vision { border-top-style: dashed; border-top-color: var(--color-text-secondary); }
+
+.gd-horizon header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.gd-horizon header strong { display: block; font-size: 15px; }
+.gd-horizon header small { font-size: 11px; font-weight: 600; color: var(--innovax-muted); }
+
+.gd-horizon-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--innovax-primary);
+  color: var(--innovax-accent);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.gd-horizon ul {
+  margin: 0;
+  padding: 0 0 0 16px;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.gd-closing {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px 24px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  background: var(--innovax-primary);
+  color: var(--innovax-surface);
+}
+
+/* El texto de marca sobre fondo oscuro usa tonos claros. */
+.gd-closing .gd-brand-product strong,
+.gd-closing .gd-brand-product span { color: var(--innovax-surface); }
+.gd-closing .gd-brand-divider { background: var(--innovax-surface); opacity: 0.24; }
+
+.gd-closing-brand { grid-row: 1 / span 2; }
+
+.gd-closing-message {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.gd-closing-message strong { color: var(--innovax-accent); }
+
+.gd-closing-sub {
+  margin: 0;
+  grid-column: 2;
+  font-size: 13px;
+  opacity: 0.82;
+}
+
+.gd-closing-cta {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--innovax-accent);
+  color: var(--innovax-primary);
+}
+
+.gd-closing-cta span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gd-closing-cta strong { font-size: 15px; }
+
+/* ------------------------------------------------------ Animaciones ------- */
+
+/* Entrada escalonada: cada elemento lleva --i en su style. */
+.gd-body [style*='--i'] {
+  animation: gd-rise 0.45s var(--gd-ease) both;
+  animation-delay: calc(var(--i) * 70ms + 100ms);
+}
+
+@keyframes gd-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes gd-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gd-panel-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gd-pulse {
+  0% { opacity: 0.7; transform: scale(1); }
+  70% { opacity: 0; transform: scale(1.025); }
+  100% { opacity: 0; transform: scale(1.025); }
+}
+
+.gd-root--reduced *,
+.gd-root--reduced *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gd-root *,
+  .gd-root *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ------------------------------------------------------- Responsivo ------- */
+
+@media (max-width: 980px) {
+  .gd-mirror,
+  .gd-fp15-compare,
+  .gd-loop {
+    grid-template-columns: 1fr;
+  }
+
+  .gd-mirror-bridge,
+  .gd-fp15-arrow {
+    flex-direction: row;
+    transform: rotate(90deg);
+    justify-self: center;
+  }
+
+  .gd-mirror-bridge-label { writing-mode: horizontal-tb; transform: none; }
+
+  .gd-horizons,
+  .gd-loop-chain {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gd-closing { grid-template-columns: 1fr; }
+  .gd-closing-brand,
+  .gd-closing-sub,
+  .gd-closing-cta { grid-column: auto; grid-row: auto; }
+}

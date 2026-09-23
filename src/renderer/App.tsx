@@ -8,7 +8,10 @@ import SgcIcon from './components/SgcIcon';
 import { AuthProvider, useAuth, SessionUser } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
+import DemoErrorBoundary from './demo/DemoErrorBoundary';
 import './styles/global.css';
+import './assets/branding/innovax/innovax-tokens.css';
+import './demo/DemoLaunch.css';
 import './components/Sidebar.css';
 import './components/Dashboard.css';
 import './modules/documentacion/Documentacion.css';
@@ -26,6 +29,7 @@ const SatisfaccionCliente = React.lazy(() => import('./modules/satisfaccion-clie
 const ControlCambios = React.lazy(() => import('./modules/control-cambios/ControlCambios'));
 const Usuarios = React.lazy(() => import('./modules/usuarios/Usuarios'));
 const Registros = React.lazy(() => import('./modules/registros/Registros'));
+const GuidedDemo = React.lazy(() => import('./demo/GuidedDemo'));
 
 type NotificacionUI = {
   id: string;
@@ -158,6 +162,7 @@ const AppContent: React.FC = () => {
   const [showNotiPanel, setShowNotiPanel] = React.useState(false);
   const notiPanelRef = React.useRef<HTMLDivElement>(null);
   const prevUnreadRef = React.useRef<number>(0);
+  const [demoOpen, setDemoOpen] = React.useState(false);
 
   const effectiveUser = user!;
   const currentSection = SECTION_INFO[section] ?? SECTION_INFO.dashboard;
@@ -254,9 +259,17 @@ const AppContent: React.FC = () => {
   };
 
   const handleLogout = () => {
+    setDemoOpen(false);
     void logout();
     setSection('dashboard');
   };
+
+  const openDemo = () => {
+    setShowNotiPanel(false);
+    setDemoOpen(true);
+  };
+
+  const closeDemo = React.useCallback(() => setDemoOpen(false), []);
 
   const notiTypeIcon = (tipo: string): import('./components/SgcIcon').SgcIconName => {
     return NOTI_ICON_MAP[tipo] || 'info';
@@ -282,6 +295,18 @@ const AppContent: React.FC = () => {
             </div>
 
             <div className="app-topbar-actions">
+              <button
+                type="button"
+                className="btn demo-launch-btn"
+                data-demo-id="demo-launch"
+                aria-haspopup="dialog"
+                aria-expanded={demoOpen}
+                onClick={openDemo}
+              >
+                <span className="demo-launch-icon" aria-hidden="true">▶</span>
+                Demo guiada Innovax
+              </button>
+
               <div className="app-user-chip" aria-label={`Sesión activa de ${effectiveUser.nombre}`}>
                 <span className="app-user-avatar">{userInitials || 'SG'}</span>
                 <div className="app-user-meta">
@@ -354,6 +379,13 @@ const AppContent: React.FC = () => {
           </div>
         </div>
         <ToastProvider />
+        {demoOpen && (
+          <DemoErrorBoundary onReset={closeDemo}>
+            <React.Suspense fallback={null}>
+              <GuidedDemo onNavigate={setSection} onClose={closeDemo} />
+            </React.Suspense>
+          </DemoErrorBoundary>
+        )}
       </div>
     </ProtectedRoute>
   );

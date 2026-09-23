@@ -1,0 +1,70 @@
+/*
+ * Estilos cargados con App.tsx (no con el chunk lazy de la demo):
+ *  - el boton de lanzamiento, visible en la barra superior tras autenticar;
+ *  - el aviso de DemoErrorBoundary, que debe existir aunque la demo no cargue.
+ * Los tokens (innovax-tokens.css) se importan tambien de forma eager en App.tsx.
+ */
+
+.demo-launch-btn {
+  min-height: 38px;
+  padding: 0 14px 0 12px;
+  gap: 8px;
+  background: var(--innovax-primary);
+  border-color: var(--innovax-primary);
+  color: var(--innovax-surface);
+  letter-spacing: 0.01em;
+  box-shadow: var(--innovax-shadow-sm);
+}
+
+.demo-launch-btn:hover:not(:disabled) {
+  box-shadow: var(--innovax-shadow-md);
+}
+
+.demo-launch-btn:focus-visible {
+  outline: 2px solid var(--innovax-accent);
+  outline-offset: 2px;
+}
+
+.demo-launch-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--innovax-accent);
+  color: var(--innovax-primary);
+  font-size: 9px;
+  line-height: 1;
+  padding-left: 2px;
+}
+
+.gd-crash {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1250;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 440px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--innovax-border);
+  background: var(--innovax-surface);
+  color: var(--innovax-text);
+  font-size: 13px;
+  box-shadow: var(--shadow-lg);
+}
+
+.gd-crash button {
+  flex-shrink: 0;
+  border: 1px solid var(--innovax-border);
+  background: transparent;
+  color: inherit;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
