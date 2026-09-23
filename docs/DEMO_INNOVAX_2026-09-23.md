@@ -26,7 +26,7 @@ producción. La demo marca cada pantalla con su estado real.
 |---|---|
 | Rama de la demo | `demo/innovax-guided-2026-09-23` |
 | Base | `fix/auth-hardening-0.5` @ `c633d9d` (PR #2, **abierto y sin mergear**) |
-| Commit de la demo | ver la sección 17 o `git log -2 --oneline` |
+| Commit de la demo | `fc4a620a0df27f8ce5d4e277b706e8b831ba38ac` (`feat: add Innovax guided product demo`) |
 
 La demo **depende** de Auth & Security Foundation 0.5: por eso parte de la rama
 del PR #2 y no de `main`. No se ha hecho merge a `main`.
