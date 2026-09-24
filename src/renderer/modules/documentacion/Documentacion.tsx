@@ -8,7 +8,7 @@ import type { SgcIconName } from '../../components/SgcIcon';
 import './Documentacion.css';
 import { useDocumentTree } from './hooks/useDocumentTree';
 import { useDocumentPermissions } from './hooks/useDocumentPermissions';
-import { useWorkflow, WF_STATUS_LABEL } from './hooks/useWorkflow';
+import { useWorkflow, WF_STATUS_LABEL, DEMO_PREVIEW_WORKFLOW_ID } from './hooks/useWorkflow';
 import { demoBus } from '../../demo/demoBus';
 import type { DemoCommand } from '../../demo/demoBus';
 import { FORBIDDEN_DEMO_DOCUMENTS } from '../../demo/data/safeDocuments';
@@ -287,6 +287,17 @@ const findPath = (node: DocNode, id: string, path: DocNode[] = []): DocNode[] =>
 };
 
 // --- Demo guiada: localizar nodos por nombre (solo lectura) -------------------
+
+/** Documento de ejemplo de la vista previa del workflow (no existe en la base). */
+const DEMO_PREVIEW_DOC_NAME = 'EJEMPLO · PR-XX Procedimiento de ejemplo';
+
+/** Correccion de ejemplo: muestra los campos reales con un contenido ilustrativo. */
+const DEMO_PREVIEW_CORRECTION = {
+  queEstaMal: 'EJEMPLO: la tabla de control de cambios no incluye la revisión actual.',
+  porQue: 'La Lista Maestra debe coincidir con la última revisión aprobada.',
+  comoCorregir: 'Agregar la revisión vigente con fecha y responsable, y volver a enviar.',
+  observaciones: '',
+};
 
 const normalizeDemoName = (value: string): string =>
   String(value || '').normalize('NFC').replace(/\s+/g, ' ').trim().toUpperCase();
@@ -1627,10 +1638,22 @@ const Documentacion: React.FC = () => {
     demoViewerPopupsRef.current.clear();
   };
 
+  const closeDecisionPreview = () => {
+    if (wfApproveDialog?.workflowId === DEMO_PREVIEW_WORKFLOW_ID) {
+      setWfApproveDialog(null);
+      setWfApproveSendEmail(false);
+    }
+    if (wfCorrectionDialog?.workflowId === DEMO_PREVIEW_WORKFLOW_ID) {
+      setWfCorrectionDialog(null);
+      setWfCorr({ queEstaMal: '', porQue: '', comoCorregir: '', observaciones: '', destinatarioIds: [] });
+    }
+  };
+
   const runDemoCommand = async (command: DemoCommand): Promise<boolean> => {
     const params = command.params || {};
     switch (command.kind) {
       case 'doc.reset':
+        closeDecisionPreview();
         setSearch('');
         setShowAccessInfoDialog(false);
         setShowWorkflowPanel(false);
@@ -1685,11 +1708,33 @@ const Documentacion: React.FC = () => {
         setShowAccessInfoDialog(false);
         return true;
       case 'doc.openReviewInbox':
+        closeDecisionPreview();
         await loadPendingReview();
         setShowWorkflowPanel(true);
         return true;
       case 'doc.closeReviewInbox':
         setShowWorkflowPanel(false);
+        return true;
+      case 'doc.openDecisionPreview': {
+        // Dialogos REALES con un documento de ejemplo; enviar esta bloqueado.
+        const branch = String(params.branch || '');
+        setShowWorkflowPanel(false);
+        closeDecisionPreview();
+        if (branch === 'aprobar') {
+          setWfApproveTargetFolder('');
+          setWfApproveSendEmail(true);
+          setWfApproveDialog({ workflowId: DEMO_PREVIEW_WORKFLOW_ID, nodeId: '', nodeName: DEMO_PREVIEW_DOC_NAME });
+          return true;
+        }
+        if (branch === 'correcciones') {
+          setWfCorr({ ...DEMO_PREVIEW_CORRECTION, destinatarioIds: [] });
+          setWfCorrectionDialog({ workflowId: DEMO_PREVIEW_WORKFLOW_ID, nodeId: '', nodeName: DEMO_PREVIEW_DOC_NAME });
+          return true;
+        }
+        return false;
+      }
+      case 'doc.closeDecisionPreview':
+        closeDecisionPreview();
         return true;
       default:
         return false;
@@ -2746,8 +2791,18 @@ const Documentacion: React.FC = () => {
 
       {/* ===== Aprobar documento dialog ===== */}
       {wfApproveDialog && (
-        <div className="doc-dialog-overlay" role="dialog" aria-modal="true" aria-label="Aprobar documento">
-          <div className="doc-dialog-card" style={{ maxWidth: 500 }}>
+        <div
+          className={`doc-dialog-overlay${wfApproveDialog.workflowId === DEMO_PREVIEW_WORKFLOW_ID ? ' doc-dialog-overlay--demo-preview' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Aprobar documento"
+        >
+          <div className="doc-dialog-card" style={{ maxWidth: 500 }} data-demo-id="doc-approve-preview">
+            {wfApproveDialog.workflowId === DEMO_PREVIEW_WORKFLOW_ID && (
+              <p className="wf-demo-preview-note" role="note">
+                <strong>EJEMPLO DE FLUJO</strong> · Vista previa de la demo guiada: aquí no se aprueba ni se envía nada.
+              </p>
+            )}
             <h4 className="doc-dialog-title">
               <DocUiIcon name="approve" className="doc-inline-icon" />
               <span>Aprobar documento</span>
@@ -2768,7 +2823,7 @@ const Documentacion: React.FC = () => {
                 ))}
               </select>
             </label>
-            <label className="permission-toggle" style={{ marginBottom: 8 }}>
+            <label className="permission-toggle" style={{ marginBottom: 8 }} data-demo-id="doc-approve-email">
               <input
                 type="checkbox"
                 checked={wfApproveSendEmail}
@@ -2776,7 +2831,7 @@ const Documentacion: React.FC = () => {
               />
               <span>Enviar correo al solicitante (automático) y destinatarios adicionales</span>
             </label>
-            {wfApproveSendEmail && (
+            {wfApproveSendEmail && wfApproveDialog.workflowId !== DEMO_PREVIEW_WORKFLOW_ID && (
               <label className="form-group" style={{ marginBottom: 12 }}>
                 <span>Destinatarios adicionales (opcional, selección múltiple)</span>
                 <select
@@ -2796,7 +2851,12 @@ const Documentacion: React.FC = () => {
             )}
             <div className="doc-dialog-actions">
               <button className="btn btn-secondary" onClick={() => setWfApproveDialog(null)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={() => void approveWorkflow()}>
+              <button
+                className="btn btn-primary"
+                onClick={() => void approveWorkflow()}
+                disabled={wfApproveDialog.workflowId === DEMO_PREVIEW_WORKFLOW_ID}
+                data-demo-id="doc-approve-confirm"
+              >
                 <DocUiIcon name="approve" className="doc-inline-icon" />
                 <span>Confirmar aprobacion</span>
               </button>
@@ -2807,8 +2867,18 @@ const Documentacion: React.FC = () => {
 
       {/* ===== Solicitar correcciones dialog ===== */}
       {wfCorrectionDialog && (
-        <div className="doc-dialog-overlay" role="dialog" aria-modal="true" aria-label="Solicitar correcciones">
-          <div className="doc-dialog-card doc-dialog-card--correction">
+        <div
+          className={`doc-dialog-overlay${wfCorrectionDialog.workflowId === DEMO_PREVIEW_WORKFLOW_ID ? ' doc-dialog-overlay--demo-preview' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Solicitar correcciones"
+        >
+          <div className="doc-dialog-card doc-dialog-card--correction" data-demo-id="doc-correction-preview">
+            {wfCorrectionDialog.workflowId === DEMO_PREVIEW_WORKFLOW_ID && (
+              <p className="wf-demo-preview-note" role="note">
+                <strong>EJEMPLO DE FLUJO</strong> · Vista previa de la demo guiada: aquí no se registra ni se envía nada.
+              </p>
+            )}
             <div className="wf-corr-header">
               <h4 className="doc-dialog-title">
                 <DocUiIcon name="correction" className="doc-inline-icon" />
@@ -2819,7 +2889,7 @@ const Documentacion: React.FC = () => {
               </p>
             </div>
 
-            <div className="wf-corr-grid">
+            <div className="wf-corr-grid" data-demo-id="doc-correction-fields">
               <label className="form-group wf-corr-field">
                 <span>¿Qué está mal? *</span>
                 <textarea
@@ -2861,7 +2931,7 @@ const Documentacion: React.FC = () => {
                 />
               </label>
 
-              <label className="form-group wf-corr-field wf-corr-field--full">
+              <label className="form-group wf-corr-field wf-corr-field--full" data-demo-id="doc-correction-email">
                 <span>Enviar correo a (destinatarios adicionales, opcional)</span>
                 <select
                   className="doc-dialog-input wf-corr-recipient-select"
@@ -2870,9 +2940,10 @@ const Documentacion: React.FC = () => {
                   value={wfCorr.destinatarioIds}
                   onChange={e => setWfCorr(prev => ({ ...prev, destinatarioIds: Array.from(e.target.selectedOptions).map(o => o.value) }))}
                 >
-                  {allUsuarios.filter(u => Number((u as any).activo ?? 1) === 1).map(u => (
-                    <option key={u.id} value={u.id}>{u.nombre} ({u.rol})</option>
-                  ))}
+                  {wfCorrectionDialog.workflowId !== DEMO_PREVIEW_WORKFLOW_ID
+                    && allUsuarios.filter(u => Number((u as any).activo ?? 1) === 1).map(u => (
+                      <option key={u.id} value={u.id}>{u.nombre} ({u.rol})</option>
+                    ))}
                 </select>
                 <small className="wf-corr-hint">
                   Se enviará correo automáticamente al usuario que envió el documento a revisión. Aquí puedes agregar destinatarios extra.
@@ -2901,7 +2972,12 @@ const Documentacion: React.FC = () => {
               <button
                 className="btn btn-danger"
                 onClick={() => void requestCorrection()}
-                disabled={!wfCorr.queEstaMal.trim() || !wfCorr.comoCorregir.trim()}
+                disabled={
+                  wfCorrectionDialog.workflowId === DEMO_PREVIEW_WORKFLOW_ID
+                  || !wfCorr.queEstaMal.trim()
+                  || !wfCorr.comoCorregir.trim()
+                }
+                data-demo-id="doc-correction-send"
               >
                 <DocUiIcon name="correction" className="doc-inline-icon" />
                 <span>Enviar correcciones</span>

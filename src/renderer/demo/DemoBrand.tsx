@@ -1,5 +1,7 @@
 import React from 'react';
 import innovaxLogo from '../assets/branding/innovax/innovax-logo.jpg';
+import '../assets/branding/innovax/innovax-tokens.css';
+import '../assets/branding/innovax/innovax-brand.css';
 import type { DataSource, DemoStatus } from './types';
 import { STATUS_META } from './steps/statusMeta';
 
@@ -51,11 +53,12 @@ export const StatusBadge: React.FC<{ status: DemoStatus }> = ({ status }) => (
   </span>
 );
 
-export type SourceKind = 'system' | 'example' | 'innovax' | 'anonymized' | 'vision' | 'no-data';
+export type SourceKind = 'system' | 'example' | 'flow-example' | 'innovax' | 'anonymized' | 'vision' | 'no-data';
 
 const SOURCE_LABEL: Record<SourceKind, string> = {
   system: 'Datos del sistema',
   example: 'Ejemplo de demo',
+  'flow-example': 'Ejemplo de flujo',
   innovax: 'Dato de Innovax',
   anonymized: 'Dato real anonimizado',
   vision: 'Visión',
@@ -65,6 +68,7 @@ const SOURCE_LABEL: Record<SourceKind, string> = {
 /** Etiqueta de origen que corresponde al dataSource de un micro-paso. */
 export const SOURCE_BY_DATA: Record<DataSource, SourceKind> = {
   REAL: 'system',
+  REAL_UI_EXAMPLE: 'flow-example',
   ANONYMIZED_REAL: 'anonymized',
   DEMO_EXAMPLE: 'example',
   VISION: 'vision',

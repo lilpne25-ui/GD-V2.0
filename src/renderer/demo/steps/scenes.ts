@@ -33,7 +33,7 @@ export const DEMO_SCENES: Scene[] = [
         speechText:
           'Innovax ya tiene su Sistema de Gestión: ' +
           'procedimientos, formatos, responsables y una Lista Maestra. ' +
-          'Ge de ve dos parte de lo que ya existe.',
+          'G D V 2 parte de lo que ya existe.',
         status: 'context',
         dataSource: 'REAL',
         visual: 'intro',
@@ -303,11 +303,11 @@ export const DEMO_SCENES: Scene[] = [
         id: 'mirror-rules',
         title: 'Lo que será regla',
         narrationText:
-          'La siguiente etapa es que esos atributos controlen el sistema: ' +
-          'el responsable dispara el workflow, el acceso define permisos, la revisión controla versiones y la retención aplica la política.',
+          'En la siguiente etapa, esos atributos controlarán el sistema: ' +
+          'el responsable disparará el workflow, el acceso definirá permisos, la revisión controlará versiones y la retención aplicará la política.',
         speechText:
-          'La siguiente etapa es que esos atributos controlen el sistema: ' +
-          'el responsable dispara el flujo de revisión, el acceso define permisos, la revisión controla versiones y la retención aplica la política.',
+          'En la siguiente etapa, esos atributos controlarán el sistema: ' +
+          'el responsable disparará el flujo de revisión, el acceso definirá permisos, la revisión controlará versiones y la retención aplicará la política.',
         target: ['doc-node-focus', 'doc-grid'],
         status: 'next',
         dataSource: 'DEMO_EXAMPLE',
@@ -351,18 +351,35 @@ export const DEMO_SCENES: Scene[] = [
   },
 
   // 9 · WORKFLOW DE REVISION -----------------------------------------------------
+  // Ciclo real (useWorkflow + WorkflowRepo): borrador -> revision -> aprobado |
+  // correcciones -> (el autor corrige y reenvia) -> revision. Las decisiones se
+  // muestran en los dialogos REALES abiertos como vista previa (no escriben).
   {
     id: 'review',
     title: 'Revisión y aprobación',
     status: 'live',
     layout: 'spotlight',
     section: 'documentacion',
-    onExit: [{ kind: 'doc.closeReviewInbox' }],
+    onExit: [{ kind: 'doc.closeDecisionPreview' }, { kind: 'doc.closeReviewInbox' }],
     steps: [
+      {
+        id: 'review-submit',
+        title: 'Enviar a revisión',
+        narrationText:
+          'Cuando un documento termina su edición, su autor lo envía a revisión. ' +
+          'En ese momento, Coordinación del SGC recibe un aviso dentro del sistema.',
+        speechText:
+          'Cuando un documento termina su edición, su autor lo envía a revisión. ' +
+          'En ese momento, la coordinación del sistema de gestión recibe un aviso dentro del sistema.',
+        target: ['doc-review-btn', 'documentacion-main'],
+        status: 'live',
+        dataSource: 'REAL',
+      },
       {
         id: 'review-inbox',
         title: 'Bandeja de revisión',
-        narrationText: 'Los documentos que se envían a revisión llegan a esta bandeja.',
+        narrationText:
+          'El documento llega a esta bandeja de revisión, con quién lo envió y cuándo.',
         action: { kind: 'doc.openReviewInbox' },
         target: ['doc-review-dialog'],
         status: 'live',
@@ -375,31 +392,98 @@ export const DEMO_SCENES: Scene[] = [
           'La bandeja indica quién puede aprobar o pedir correcciones: Coordinación del SGC, Dirección o Administración.',
         speechText:
           'La bandeja indica quién puede aprobar o pedir correcciones: ' +
-          'Coordinación del ese ge ce, Dirección o Administración.',
+          'la coordinación del sistema de gestión, Dirección o Administración.',
         target: ['doc-review-rule', 'doc-review-dialog'],
         status: 'live',
         dataSource: 'REAL',
       },
       {
-        id: 'review-document',
-        title: 'Documento en revisión',
-        narrationText:
-          'Cada documento muestra quién lo envió y cuándo. La revisión deja de depender de correos y seguimiento manual.',
-        target: ['doc-review-row'],
+        id: 'review-branches',
+        title: 'Dos caminos',
+        narrationText: 'Desde aquí existen dos caminos: aprobar, o solicitar correcciones.',
+        action: { kind: 'doc.openReviewInbox' },
+        target: ['doc-review-dialog'],
         status: 'live',
         dataSource: 'REAL',
-        fallbackText: 'Hoy no hay documentos pendientes de revisión en esta base.',
+        visual: 'workflow-branch',
+        workflowFocus: 'overview',
       },
       {
-        id: 'review-decision',
-        title: 'Aprobar o corregir',
+        id: 'review-approve',
+        title: 'Aprobar',
         narrationText:
-          'Aprobar o solicitar correcciones queda registrado con quién y cuándo. ' +
-          'En la demo no pulsamos estos botones.',
-        target: ['doc-review-actions'],
+          'Si el documento cumple con lo requerido, el responsable autorizado lo aprueba. ' +
+          'Al hacerlo puede moverlo a la carpeta de aprobados y avisar por correo.',
+        action: { kind: 'doc.openDecisionPreview', params: { branch: 'aprobar' } },
+        target: ['doc-approve-preview'],
         status: 'live',
-        dataSource: 'REAL',
-        fallbackText: 'Sin documentos pendientes, los botones Aprobar y Corregir no se muestran.',
+        dataSource: 'REAL_UI_EXAMPLE',
+        visual: 'workflow-branch',
+        workflowFocus: 'approve',
+      },
+      {
+        id: 'review-approve-result',
+        title: 'Resultado: aprobado',
+        narrationText:
+          'Al confirmar, el documento queda Aprobado, con el nombre de quien aprobó y la fecha. ' +
+          'Su autor recibe el aviso: documento aprobado.',
+        action: { kind: 'doc.openDecisionPreview', params: { branch: 'aprobar' } },
+        target: ['doc-approve-confirm', 'doc-approve-preview'],
+        status: 'live',
+        dataSource: 'REAL_UI_EXAMPLE',
+        visual: 'workflow-branch',
+        workflowFocus: 'approve',
+      },
+      {
+        id: 'review-correct',
+        title: 'Solicitar correcciones',
+        narrationText:
+          'Si necesita cambios, no se pierde el seguimiento. ' +
+          'El revisor indica qué está mal, por qué, y cómo debe corregirse.',
+        action: { kind: 'doc.openDecisionPreview', params: { branch: 'correcciones' } },
+        target: ['doc-correction-fields', 'doc-correction-preview'],
+        status: 'live',
+        dataSource: 'REAL_UI_EXAMPLE',
+        visual: 'workflow-branch',
+        workflowFocus: 'correct',
+      },
+      {
+        id: 'review-correct-result',
+        title: 'Resultado: correcciones',
+        narrationText:
+          'El documento pasa a Correcciones y la observación queda en su historial. ' +
+          'Su autor recibe el aviso y un correo con el detalle.',
+        action: { kind: 'doc.openDecisionPreview', params: { branch: 'correcciones' } },
+        target: ['doc-correction-send', 'doc-correction-preview'],
+        status: 'live',
+        dataSource: 'REAL_UI_EXAMPLE',
+        visual: 'workflow-branch',
+        workflowFocus: 'correct',
+      },
+      {
+        id: 'review-resubmit',
+        title: 'Corregir y reenviar',
+        narrationText:
+          'El autor corrige y vuelve a enviarlo. ' +
+          'El documento regresa a revisión, y Coordinación recibe un nuevo aviso.',
+        action: { kind: 'doc.openDecisionPreview', params: { branch: 'correcciones' } },
+        target: ['doc-correction-preview'],
+        status: 'live',
+        dataSource: 'REAL_UI_EXAMPLE',
+        visual: 'workflow-branch',
+        workflowFocus: 'resubmit',
+      },
+      {
+        id: 'review-email',
+        title: 'También por correo',
+        narrationText:
+          'Además del aviso interno, el sistema puede enviar la notificación por correo. ' +
+          'Así, la revisión deja de depender de correos aislados que después nadie puede rastrear.',
+        action: { kind: 'doc.openDecisionPreview', params: { branch: 'correcciones' } },
+        target: ['doc-correction-email', 'doc-correction-preview'],
+        status: 'live',
+        dataSource: 'REAL_UI_EXAMPLE',
+        visual: 'workflow-email',
         autoAdvance: false,
       },
     ],
@@ -475,7 +559,7 @@ export const DEMO_SCENES: Scene[] = [
           'No programamos una pantalla especial para FP-05-C: ' +
           'el formulario nace de su definición.',
         speechText:
-          'No programamos una pantalla especial para el efe pe cero cinco ce: ' +
+          'No programamos una pantalla especial para el efe, pe, cero cinco, ce: ' +
           'el formulario nace de su definición.',
         target: ['dynamic-record-form', 'dynamic-records-root'],
         status: 'live',
@@ -574,7 +658,9 @@ export const DEMO_SCENES: Scene[] = [
         id: 'record-lifecycle',
         title: 'Ciclo de vida del registro',
         narrationText:
-          'Cada registro recorre un ciclo de vida: borrador, en revisión, aprobado, rechazado u obsoleto.',
+          'Cada registro recorre un ciclo de vida: ' +
+          'borrador, en revisión, aprobado, rechazado u obsoleto. ' +
+          'Esta base todavía no tiene registros de demostración, por eso lo mostramos como capacidad.',
         target: ['dynamic-record-list', 'dynamic-records-root'],
         status: 'live',
         dataSource: 'NO_DATA',
@@ -604,13 +690,13 @@ export const DEMO_SCENES: Scene[] = [
     steps: [
       {
         id: 'fp15-format',
-        title: 'Ese sigue siendo su FP-15',
+        title: 'Ese seguirá siendo su FP-15',
         narrationText:
-          'Ese sigue siendo su FP-15. ' +
-          'Pero ahora produce información.',
+          'Ese seguirá siendo su FP-15. ' +
+          'La diferencia es que también producirá información.',
         speechText:
-          'Ese sigue siendo su efe pe quince. ' +
-          'Pero ahora produce información.',
+          'Ese seguirá siendo su efe pe quince. ' +
+          'La diferencia es que también producirá información.',
         status: 'next',
         dataSource: 'ANONYMIZED_REAL',
         visual: 'fp15',
@@ -619,8 +705,8 @@ export const DEMO_SCENES: Scene[] = [
         id: 'fp15-data',
         title: 'De captura a decisión',
         narrationText:
-          'Con datos estructurados, cada paro calcula su duración y alimenta la recurrencia y el Pareto. ' +
-          'La no conformidad, la acción y el indicador son la siguiente etapa.',
+          'En la siguiente etapa, cada paro calculará su duración y alimentará la recurrencia y el Pareto. ' +
+          'Después se conectarán la no conformidad, la acción y el indicador.',
         status: 'next',
         dataSource: 'ANONYMIZED_REAL',
         visual: 'fp15-flow',

@@ -21,6 +21,7 @@ import type { EffectiveMode, NarrationOutcome, NarrationStage, PlayMode } from '
 // La voz nunca bloquea la demo: si falla, la demo continua en modo manual.
 
 export const VOICE_UNAVAILABLE_TEXT = 'Voz no disponible. Continuando en modo manual.';
+export const VOICE_FALLBACK_TEXT = 'Voz principal no disponible. Usando voz de respaldo.';
 
 export type VoiceStatus = 'idle' | 'initializing' | 'ready' | 'unavailable';
 
@@ -67,6 +68,12 @@ export function usePlayback(input: PlaybackInput) {
     if (!engineRef.current) {
       try {
         engineRef.current = createVoiceEngine();
+        // Aviso discreto si una frase no tiene audio de Dalia y la dice la voz de respaldo.
+        engineRef.current.onEvent(event => {
+          if (event.type !== 'STARTED') return;
+          if (event.source === 'fallback') setNotice(VOICE_FALLBACK_TEXT);
+          else setNotice(prev => (prev === VOICE_FALLBACK_TEXT ? null : prev));
+        });
       } catch {
         engineRef.current = null;
       }

@@ -9,40 +9,28 @@
   display: flex;
   flex-direction: column;
   padding: 18px 14px 14px;
-  color: var(--color-sidebar-text);
-  background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 26%),
-    linear-gradient(180deg, #0f172a 0%, #111d32 42%, #0d1626 100%);
-  border-right: 1px solid rgba(148, 163, 184, 0.14);
+  color: var(--innovax-on-dark-muted);
+  background: var(--innovax-sidebar-bg);
+  border-right: 1px solid var(--innovax-on-dark-border);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.02);
   -webkit-user-select: none;
   user-select: none;
 }
 
 .sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: grid;
+  justify-items: start;
+  gap: 10px;
   margin-bottom: 18px;
-  padding: 14px 14px 16px;
-  border-radius: 20px;
-  background: var(--color-sidebar-surface);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--innovax-on-dark-subtle);
+  border: 1px solid var(--innovax-on-dark-border);
 }
 
-.sidebar-brand-mark {
-  width: 44px;
-  height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #1d4ed8 0%, #0f8dcf 100%);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.22);
+/* El logo va siempre sobre su tarjeta blanca (JPG sin transparencia). */
+.sidebar-brand .gd-logo-card {
+  border-color: transparent;
 }
 
 .sidebar-brand-copy {
@@ -52,21 +40,24 @@
 }
 
 .sidebar-logo {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
-  color: #ffffff;
-  letter-spacing: -0.02em;
+  color: var(--innovax-on-dark);
+  letter-spacing: -0.01em;
 }
 
 .sidebar-subtitle {
   font-size: 11px;
-  color: rgba(206, 215, 229, 0.72);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--innovax-on-dark-muted);
 }
 
 .sidebar-nav {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
 }
 
@@ -81,11 +72,13 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(206, 215, 229, 0.56);
+  color: var(--innovax-on-dark-muted);
 }
 
 .sidebar-group-items {
   display: grid;
+  /* minmax(0, 1fr): el texto largo se recorta con elipsis en vez de ensanchar el menu. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 2px;
 }
 
@@ -94,28 +87,33 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 14px;
+  gap: 10px;
+  padding: 9px 12px;
   border: 1px solid transparent;
   border-radius: 14px;
   background: transparent;
-  color: var(--color-sidebar-text);
+  color: var(--innovax-on-dark-muted);
   text-align: left;
   transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease, color 0.16s ease;
 }
 
 .sidebar-item:hover {
   transform: translateY(-1px);
-  background: rgba(148, 163, 184, 0.1);
-  border-color: rgba(148, 163, 184, 0.12);
-  color: #ffffff;
+  background: var(--innovax-on-dark-subtle);
+  border-color: var(--innovax-on-dark-border);
+  color: var(--innovax-on-dark);
 }
 
+.sidebar-item:focus-visible {
+  outline: 2px solid var(--innovax-accent);
+  outline-offset: 1px;
+}
+
+/* Activo: superficie calida con el acento Innovax (no el verde de "Funciona hoy"). */
 .sidebar-item--active {
-  background: linear-gradient(135deg, rgba(26, 77, 216, 0.95) 0%, rgba(18, 63, 165, 0.96) 100%);
-  border-color: rgba(147, 197, 253, 0.34);
-  color: #ffffff;
-  box-shadow: 0 16px 28px rgba(23, 83, 212, 0.24);
+  background: var(--innovax-sidebar-active-bg);
+  border-color: var(--innovax-sidebar-active-border);
+  color: var(--innovax-on-dark);
 }
 
 .sidebar-item-indicator {
@@ -126,7 +124,7 @@
 }
 
 .sidebar-item--active .sidebar-item-indicator {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--innovax-accent);
 }
 
 .sidebar-icon {
@@ -144,15 +142,16 @@
   text-overflow: ellipsis;
 }
 
+/* Prototipo: neutro y discontinuo, distinto del acento de marca y de "Funciona hoy". */
 .sidebar-proto-badge {
   flex-shrink: 0;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 999px;
-  border: 1px solid rgba(251, 191, 36, 0.55);
-  color: rgba(253, 230, 138, 0.95);
-  font-size: 9.5px;
+  border: 1px dashed var(--innovax-on-dark-muted);
+  color: var(--innovax-on-dark-muted);
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -164,8 +163,8 @@
   justify-content: space-between;
   gap: 10px;
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.56);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: var(--innovax-on-dark-subtle);
+  border: 1px solid var(--innovax-on-dark-border);
 }
 
 .sidebar-footer-status {
@@ -173,7 +172,7 @@
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: rgba(206, 215, 229, 0.7);
+  color: var(--innovax-on-dark-muted);
 }
 
 .sidebar-status-dot {
@@ -187,7 +186,7 @@
 .sidebar-version {
   font-size: 11px;
   font-weight: 700;
-  color: rgba(206, 215, 229, 0.52);
+  color: var(--innovax-on-dark-muted);
 }
 
 @media (max-width: 1180px) {
@@ -198,8 +197,14 @@
   }
 
   .sidebar-brand {
-    justify-content: center;
-    padding-inline: 8px;
+    justify-items: center;
+    padding: 6px 2px;
+  }
+
+  .sidebar-brand .gd-logo-card {
+    height: 20px;
+    padding: 1px 3px;
+    border-radius: 6px;
   }
 
   .sidebar-brand-copy,
@@ -216,8 +221,8 @@
     white-space: nowrap;
     padding: 6px 12px;
     border-radius: 8px;
-    background: #1e293b;
-    color: #ffffff;
+    background: var(--innovax-chocolate);
+    color: var(--innovax-on-dark);
     font-size: 12px;
     font-weight: 600;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -235,7 +240,7 @@
     transform: translateY(-50%) rotate(45deg);
     width: 8px;
     height: 8px;
-    background: #1e293b;
+    background: var(--innovax-chocolate);
   }
 
   .sidebar-item:hover .sidebar-label {
@@ -269,10 +274,4 @@
     justify-content: center;
   }
 
-  .sidebar-brand-mark {
-    width: 36px;
-    height: 36px;
-    font-size: 12px;
-    border-radius: 10px;
-  }
 }

@@ -38,6 +38,8 @@ import { DemoBrand, SOURCE_BY_DATA, SourceTag, StatusBadge } from './DemoBrand';
 interface GuidedDemoProps {
   onNavigate: (section: string) => void;
   onClose: () => void;
+  /** Prueba de audio del presentador: cierra la demo y repite el saludo. */
+  onReplayWelcome?: () => void;
 }
 
 /** Feature flag existente de Dynamic Records (ver DynamicRecordsPanel). */
@@ -48,7 +50,7 @@ const FIELD_ORIGIN_LABEL = {
   system: 'Lo asigna el sistema',
 } as const;
 
-const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
+const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose, onReplayWelcome }) => {
   const reducedMotion = usePrefersReducedMotion();
   const data = useDemoData();
   const engine = useDemoEngine(DEMO_SCENES, { navigate: onNavigate });
@@ -216,7 +218,7 @@ const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
   const sceneCount = DEMO_SCENES.length;
   // Estos visuales ya llevan su propia etiqueta de origen (el plan marca el
   // estado de cada horizonte).
-  const visualHasSource = ['fp15', 'fp15-flow', 'record-lifecycle', 'roadmap', 'roadmap-close']
+  const visualHasSource = ['fp15', 'fp15-flow', 'record-lifecycle', 'roadmap', 'roadmap-close', 'workflow-email']
     .includes(step.visual || '');
   const showSource = !isOpening && !visualHasSource && step.dataSource !== 'REAL';
   // Estos visuales repiten la narracion en grande: el texto queda para lectores de pantalla.
@@ -402,6 +404,16 @@ const GuidedDemo: React.FC<GuidedDemoProps> = ({ onNavigate, onClose }) => {
             {started && playback.voiceActive && (
               <button type="button" className="gd-chip-btn" onClick={playback.replay}>
                 ↻ Repetir
+              </button>
+            )}
+            {onReplayWelcome && (
+              <button
+                type="button"
+                className="gd-chip-btn gd-chip-btn--quiet"
+                onClick={onReplayWelcome}
+                title="Prueba de audio del presentador: cierra la demo y repite el saludo inicial"
+              >
+                Repetir bienvenida
               </button>
             )}
           </div>

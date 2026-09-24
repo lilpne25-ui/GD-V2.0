@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Muestras de voz · Innovax</title>
+<style>
+  :root { --choc:#1f130f; --amar:#fdd000; --bron:#7b4114; --marfil:#fdfbf8; --muted:rgba(31,19,15,.66); --border:rgba(31,19,15,.14); }
+  body { margin:0; font:15px/1.5 'Segoe UI',sans-serif; background:var(--marfil); color:var(--choc); }
+  header { background:var(--choc); color:var(--marfil); padding:16px 24px; }
+  header h1 { margin:0; font-size:20px; } header p { margin:4px 0 0; opacity:.78; font-size:13px; }
+  main { padding:18px 24px; display:grid; gap:16px; max-width:1100px; }
+  section { background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px 18px; }
+  h2 { margin:0 0 10px; font-size:16px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  button { font:inherit; padding:7px 14px; border-radius:9px; border:1px solid var(--border); background:#fff; cursor:pointer; }
+  button.primary { background:var(--choc); color:var(--marfil); border-color:var(--choc); }
+  button.on { outline:3px solid var(--amar); }
+  select, input { font:inherit; padding:5px 8px; border:1px solid var(--border); border-radius:7px; }
+  .sample { display:grid; grid-template-columns: 170px 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--border); }
+  .sample:first-of-type { border-top:0; }
+  .sample b { font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--bron); }
+  .muted { color:var(--muted); font-size:13px; }
+  .voices label { display:inline-flex; gap:6px; align-items:center; margin-right:14px; }
+  .tag { font-size:11px; padding:1px 7px; border-radius:999px; border:1px solid var(--border); margin-left:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Muestras de voz · Sistema de Gestión de Calidad Innovax</h1>
+  <p>Escucha y decide. Las voces «Online (Natural)» de Edge son neuronales; para la demo se pregenerarían como audio local. Sabina es la voz local actual (referencia).</p>
+</header>
+<main>
+  <section>
+    <h2>1 · Voz</h2>
+    <div class="row">
+      <label>Voz <select id="voice"></select></label>
+      <label>Velocidad <select id="rate">
+        <option value="0.95">0.95 · pausada</option>
+        <option value="1" selected>1.0 · natural</option>
+        <option value="1.05">1.05 · ágil</option>
+      </select></label>
+      <label>Pausa entre frases <select id="gap">
+        <option value="250">corta</option>
+        <option value="450" selected>natural</option>
+        <option value="700">amplia</option>
+      </select></label>
+      <button id="stop">■ Detener</button>
+    </div>
+    <p class="muted" id="status"></p>
+  </section>
+
+  <section>
+    <h2>2 · Muestras</h2>
+    <div id="samples"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" id="playAll">▶ Escuchar todas con esta voz</button>
+    </div>
+  </section>
+</main>
+<script>
+// Cada muestra: frases separadas; "|" marca una pausa natural dentro del texto.
+const SAMPLES = [
+  ['A · Bienvenida', ['Buenos días, Innovax.', 'Bienvenidos a su Sistema de Gestión de Calidad.']],
+  ['Dashboard', ['Este panel muestra el estado actual del sistema.', 'Aquí vemos los documentos controlados que existen hoy, leídos directamente de la base de datos.']],
+  ['Documentación', ['Desde aquí, Calidad consulta la documentación vigente de Innovax,', 'con la misma estructura que ya utilizan.']],
+  ['FP-05-C', ['No programamos una pantalla especial para el FP-05-C.', 'El formulario nace de su definición.']],
+  ['B · Aprobación', ['Si el documento cumple con lo requerido, el responsable autorizado lo aprueba.', 'La decisión queda registrada: quién aprobó, y cuándo.', 'Su autor recibe el aviso: documento aprobado.']],
+  ['C · Corrección', ['Si necesita cambios, no se pierde el seguimiento.', 'El revisor indica qué está mal, por qué, y cómo debe corregirse.', 'El autor corrige, vuelve a enviarlo… y el documento regresa a revisión.']],
+  ['D · FP-15', ['Ese seguirá siendo su FP-15.', 'Pero además… producirá información.']],
+  ['E · Cierre', ['Tu Sistema de Gestión ya existe.', 'Nosotros lo hacemos operativo.', 'El siguiente paso es definir juntos el piloto de Innovax.']],
+];
+const FEMALE = /(Dalia|Paloma|Elvira|Ximena|Salome|Salomé|Catalina|Elena|Sofia|María|Andrea|Marta|Karla|Yolanda|Margarita|Camila|Karina|Tania|Lorena|Valentina|Paola|Belkys|Ramona|Teresa|Sabina|Helena|Laura)/;
+const PREFERRED = ['Dalia', 'Paloma', 'Elvira', 'Ximena', 'Salome', 'Catalina', 'Sabina'];
+const $ = id => document.getElementById(id);
+let voices = [];
+let token = 0;
+
+function render() {
+  const all = speechSynthesis.getVoices().filter(v => /^es/i.test(v.lang) && FEMALE.test(v.name));
+  voices = all.sort((a, b) => {
+    const ia = PREFERRED.findIndex(p => a.name.includes(p)), ib = PREFERRED.findIndex(p => b.name.includes(p));
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  $('voice').innerHTML = voices.map((v, i) =>
+    `<option value="${i}">${v.name.replace('Microsoft ', '').replace(' - Spanish', ' ·')} ${v.localService ? '(local)' : '(natural, en línea)'}</option>`).join('');
+  $('samples').innerHTML = SAMPLES.map(([label, parts], i) =>
+    `<div class="sample"><b>${label}</b><span>${parts.join(' ')}</span><button data-i="${i}">▶ Escuchar</button></div>`).join('');
+  $('status').textContent = voices.length ? `${voices.length} voces femeninas en español disponibles.` : 'Cargando voces…';
+}
+
+function sayOne(voice, text, rate) {
+  return new Promise(resolve => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = voice; u.lang = voice.lang; u.rate = rate; u.pitch = 1; u.volume = 1;
+    u.onend = () => resolve(true); u.onerror = () => resolve(false);
+    speechSynthesis.speak(u);
+  });
+}
+
+async function play(parts) {
+  const my = ++token;
+  speechSynthesis.cancel();
+  const voice = voices[Number($('voice').value)];
+  const rate = Number($('rate').value), gap = Number($('gap').value);
+  for (let i = 0; i < parts.length; i++) {
+    if (my !== token) return;
+    await sayOne(voice, parts[i], rate);
+    if (i < parts.length - 1) await new Promise(r => setTimeout(r, gap));
+  }
+}
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-i]'); if (!b) return;
+  document.querySelectorAll('button.on').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  await play(SAMPLES[Number(b.dataset.i)][1]);
+  b.classList.remove('on');
+});
+$('stop').onclick = () => { token++; speechSynthesis.cancel(); };
+$('playAll').onclick = async () => {
+  const my = ++token;
+  for (const [, parts] of SAMPLES) {
+    if (my !== token) return;
+    await play(parts);
+    token = my;
+    await new Promise(r => setTimeout(r, 900));
+  }
+};
+speechSynthesis.onvoiceschanged = render;
+render();
+</script>
+</body>
+</html>

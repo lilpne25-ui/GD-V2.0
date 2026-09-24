@@ -322,79 +322,7 @@
   text-align: center;
 }
 
-/* --------------------------------------------------------- Co-branding --- */
-
-.gd-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-/* El logo JPG tiene fondo blanco: siempre sobre tarjeta blanca con margen. */
-.gd-logo-card {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface-solid);
-  border: 1px solid var(--innovax-border);
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-
-.gd-logo-card--sm { height: 34px; padding: 2px 6px; }
-.gd-logo-card--md { height: 52px; padding: 4px 10px; }
-.gd-logo-card--lg { height: 96px; padding: 6px 16px; border-radius: 14px; }
-
-.gd-logo-img {
-  display: block;
-  height: 100%;
-  width: auto;
-  object-fit: contain;
-  user-select: none;
-}
-
-.gd-logo-fallback {
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: var(--innovax-text);
-}
-
-.gd-brand-divider {
-  width: 1px;
-  align-self: stretch;
-  background: var(--innovax-border);
-}
-
-.gd-brand-product {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  min-width: 0;
-}
-
-.gd-brand-product strong {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--innovax-text);
-}
-
-.gd-brand-product span {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--innovax-muted);
-}
-
-.gd-brand-product em {
-  margin-top: 6px;
-  font-style: normal;
-  font-size: 13px;
-  color: var(--innovax-muted);
-}
-
-.gd-brand--lg .gd-brand-product strong { font-size: 24px; letter-spacing: -0.02em; }
-.gd-brand--lg .gd-brand-product span { font-size: 14px; }
-.gd-brand--lg { gap: 20px; }
+/* Co-branding (logo y marca): ver assets/branding/innovax/innovax-brand.css */
 
 /* ------------------------------------------------ Estado y origen datos --- */
 
@@ -426,11 +354,11 @@
   border-color: var(--color-success);
 }
 
-/* Siguiente implementacion: color informativo de GD-V2. */
+/* Siguiente implementacion: color informativo de GD-V2 (no el de la marca). */
 .gd-status--next {
-  color: var(--color-primary);
-  background: var(--color-primary-light);
-  border-color: var(--color-primary);
+  color: var(--color-info);
+  background: var(--color-info-light);
+  border-color: var(--color-info);
 }
 
 /* Vision: neutro y discontinuo, para leerse como "no construido". */
@@ -496,9 +424,9 @@
   display: inline-block;
   padding: 2px 7px;
   border-radius: 999px;
-  border: 1px solid var(--color-primary);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  border: 1px solid var(--color-info);
+  background: var(--color-info-light);
+  color: var(--color-info);
   font-size: 10px;
   font-weight: 800;
   white-space: nowrap;
@@ -1141,7 +1069,7 @@
 
 .gd-horizon--live { border-top-color: var(--color-success); }
 .gd-horizon--next,
-.gd-horizon--pilot { border-top-color: var(--color-primary); }
+.gd-horizon--pilot { border-top-color: var(--color-info); }
 .gd-horizon--vision { border-top-style: dashed; border-top-color: var(--color-text-secondary); }
 
 .gd-horizon header {
@@ -1596,6 +1524,117 @@
   outline-offset: 2px;
 }
 
+/* ------------------------------------ Escena 9 · ciclo de revision ------ */
+
+.gd-source--flow-example {
+  color: var(--color-text-secondary);
+  border: 1px dashed var(--color-text-secondary);
+  background: var(--color-surface-solid);
+}
+
+.gd-wf { display: grid; gap: 8px; }
+
+.gd-wf-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-wf-arrow { color: var(--innovax-muted); font-weight: 800; }
+
+.gd-wf-state {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--innovax-border);
+  background: var(--color-surface-solid);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.gd-wf-state--review { color: var(--color-info); border-color: var(--color-info); background: var(--color-info-light); }
+.gd-wf-state--decision { color: var(--innovax-surface); background: var(--innovax-primary); border-color: var(--innovax-primary); }
+
+.gd-wf-branches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gd-wf-branch {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--innovax-border);
+  background: var(--color-surface-solid);
+  transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.gd-wf-branch header { font-size: 12.5px; font-weight: 800; margin-bottom: 4px; }
+.gd-wf-branch--approve header { color: var(--color-success); }
+.gd-wf-branch--correct header { color: var(--color-warning); }
+.gd-wf-branch--approve.is-on { border-color: var(--color-success); }
+.gd-wf-branch--correct.is-on { border-color: var(--color-warning); }
+.gd-wf-branch.is-dim { opacity: 0.45; }
+
+.gd-wf-branch p,
+.gd-wf-branch ul {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--innovax-muted);
+}
+
+.gd-wf-branch ul { padding-left: 14px; }
+.gd-wf-branch li { color: var(--innovax-text); }
+
+.gd-wf-loop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px dashed var(--innovax-border);
+  font-size: 11px;
+  color: var(--innovax-muted);
+}
+
+.gd-wf-loop.is-on { border-color: var(--color-warning); color: var(--innovax-text); font-weight: 700; }
+
+.gd-wf-note { margin: 4px 0 0; font-size: 11.5px; color: var(--innovax-muted); }
+
+.gd-mail { display: grid; gap: 8px; }
+
+.gd-mail-card {
+  border: 1px solid var(--innovax-border);
+  border-radius: 10px;
+  background: var(--color-surface-solid);
+  overflow: hidden;
+}
+
+.gd-mail-meta {
+  margin: 0;
+  padding: 8px 10px;
+  display: grid;
+  gap: 2px;
+  font-size: 11.5px;
+  background: var(--innovax-surface);
+  border-bottom: 1px solid var(--innovax-border);
+}
+
+.gd-mail-meta div { display: grid; grid-template-columns: 52px minmax(0, 1fr); }
+.gd-mail-meta dt { color: var(--innovax-muted); font-weight: 700; }
+.gd-mail-meta dd { margin: 0; }
+
+.gd-mail-body { padding: 8px 10px; font-size: 11.5px; line-height: 1.45; }
+.gd-mail-body p { margin: 0 0 4px; }
+.gd-mail-by { color: var(--innovax-muted); }
+
 /* ------------------------------------------------------- Responsivo ------- */
 
 @media (max-width: 980px) {
@@ -1630,4 +1669,14 @@
   .gd-closing-brand,
   .gd-closing-sub,
   .gd-closing-cta { grid-column: auto; grid-row: auto; }
+}
+
+/* Prueba de audio del presentador: presente pero sin protagonismo. */
+.gd-chip-btn--quiet {
+  opacity: 0.72;
+  border-style: dashed;
+}
+.gd-chip-btn--quiet:hover,
+.gd-chip-btn--quiet:focus-visible {
+  opacity: 1;
 }

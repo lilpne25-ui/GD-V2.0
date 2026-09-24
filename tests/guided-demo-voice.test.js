@@ -77,7 +77,7 @@ const V = (name, lang, extra = {}) => ({ name, lang, localService: true, default
 
 async function readyEngine(voices = [V('Sabina', 'es-MX')]) {
   const synth = makeSynth(voices);
-  const engine = new SpeechVoiceEngine(synth, makeUtterance, { voicesTimeoutMs: 10 });
+  const engine = new SpeechVoiceEngine(synth, makeUtterance, { voicesTimeoutMs: 10, chunkGapMs: 0 });
   const events = [];
   engine.onEvent(e => events.push(e.type));
   const init = await engine.initialize();
@@ -108,25 +108,27 @@ test('se elige es-MX antes que cualquier otra voz', () => {
   assert.equal(picked.lang, 'es-MX');
 });
 
-test('sin es-MX se prefiere una voz latinoamericana y luego cualquier es-*', () => {
-  assert.equal(pickVoice([V('Helena', 'es-ES'), V('Voz de México', 'es-US')]).name, 'Voz de México');
+test('sin es-MX femenina se prefiere una latinoamericana y luego cualquier es-* femenina', () => {
+  assert.equal(pickVoice([V('Helena', 'es-ES'), V('Paulina - Spanish (Latin America)', 'es-US')]).name,
+    'Paulina - Spanish (Latin America)');
   assert.equal(pickVoice([V('Zira', 'en-US', { default: true }), V('Helena', 'es-ES')]).lang, 'es-ES');
   assert.equal(pickVoice([V('Zira', 'en-US', { default: true }), V('Laura', 'es_ES')]).name, 'Laura');
 });
 
-test('sin voces en espanol se usa la voz predeterminada del sistema', () => {
-  assert.equal(pickVoice([V('David', 'en-US'), V('Zira', 'en-US', { default: true })]).name, 'Zira');
+test('sin voz femenina en espanol no hay voz (nunca otra lengua ni la predeterminada)', () => {
+  assert.equal(pickVoice([V('David', 'en-US'), V('Zira', 'en-US', { default: true })]), null);
 });
 
 test('nunca se eligen voces remotas (sin internet)', () => {
-  const picked = pickVoice([V('Remota', 'es-MX', { localService: false }), V('Helena', 'es-ES')]);
+  const picked = pickVoice([V('Sabina Online', 'es-MX', { localService: false }), V('Helena', 'es-ES')]);
   assert.equal(picked.name, 'Helena');
-  assert.equal(pickVoice([V('Remota', 'es-MX', { localService: false })]), null);
+  assert.equal(pickVoice([V('Sabina Online', 'es-MX', { localService: false })]), null);
 });
 
-test('la seleccion no depende de un nombre de voz fijo', () => {
+test('el unico nombre de voz en el codigo es Dalia (voz aprobada)', () => {
   const src = fs.readFileSync(path.join(DEMO_DIR, 'narration', 'VoiceEngine.ts'), 'utf8');
-  assert.ok(!/Sabina|Helena|Raul|Zira|David|Google|Microsoft/.test(src), 'no debe haber nombres de voz en el codigo');
+  assert.ok(!/Sabina|Helena|Laura|Raul|Pablo|Zira|David|Google|Microsoft/.test(src), 'no debe haber otros nombres de voz');
+  assert.match(src, /dalia/i);
 });
 
 test('espera el evento voiceschanged cuando Windows publica las voces tarde', async () => {
@@ -141,8 +143,8 @@ test('espera el evento voiceschanged cuando Windows publica las voces tarde', as
   assert.equal(init.voice.lang, 'es-MX');
 });
 
-test('tono profesional: velocidad algo menor a 1, pitch y volumen normales', async () => {
-  assert.ok(VOICE_RATE >= 0.9 && VOICE_RATE <= 0.98);
+test('configuracion aprobada en la audicion: velocidad 1.05, pitch y volumen normales', async () => {
+  assert.equal(VOICE_RATE, 1.05);
   assert.equal(VOICE_PITCH, 1);
   assert.equal(VOICE_VOLUME, 1);
   const { synth, engine } = await readyEngine();
@@ -356,7 +358,7 @@ test('reglas de avance: solo avanza en automatico, al terminar y si el paso lo p
   assert.equal(decideAfterNarration({ ...base, outcome: 'cancelled' }), 'wait');
 });
 
-test('simulacion del recorrido completo en automatico: 47/47 sin bloqueos', async () => {
+test('simulacion del recorrido completo en automatico: 53/53 sin bloqueos', async () => {
   const voice = new FakeVoiceEngine({ mode: 'auto', autoFinishMs: 1 });
   await voice.initialize();
   const controller = new VoiceController(voice, NO_DELAY);
@@ -379,8 +381,8 @@ test('simulacion del recorrido completo en automatico: 47/47 sin bloqueos', asyn
     if (decision === 'wait') waits += 1; // el presentador pulsa Siguiente
     index += 1;
   }
-  assert.equal(index, 47);
-  assert.equal(voice.spoken.length, 47, 'se narran los 47 micro-pasos');
+  assert.equal(index, 53);
+  assert.equal(voice.spoken.length, 53, 'se narran los 53 micro-pasos');
   assert.equal(waits, all.filter(s => s.autoAdvance === false).length);
 });
 
@@ -412,7 +414,7 @@ test('speechText, si existe, tambien tiene 1-3 frases', () => {
 test('los pasos del presentador y los cierres no avanzan solos', () => {
   const manual = steps().filter(s => s.autoAdvance === false).map(s => s.id);
   assert.deepEqual(manual, [
-    'master-viewer', 'review-decision', 'record-protection', 'fp15-data', 'loop-value', 'plan-close',
+    'master-viewer', 'review-email', 'record-protection', 'fp15-data', 'loop-value', 'plan-close',
   ]);
   for (const step of steps()) {
     if (step.action?.trigger === 'presenter') {
@@ -422,7 +424,7 @@ test('los pasos del presentador y los cierres no avanzan solos', () => {
 });
 
 test('con el entorno limitado se pronuncia tambien el aviso honesto', () => {
-  const step = steps().find(s => s.id === 'review-document');
+  const step = steps().find(s => s.id === 'master-row');
   assert.ok(speechFor(step, true).endsWith(step.fallbackText));
   assert.equal(speechFor(step, false), step.narrationText);
 });

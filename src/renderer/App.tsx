@@ -11,6 +11,8 @@ import PublicOnlyRoute from './components/PublicOnlyRoute';
 import DemoErrorBoundary from './demo/DemoErrorBoundary';
 import { demoBus } from './demo/demoBus';
 import { isPrototypeSection } from './components/prototypeSections';
+import WelcomeGreeting from './welcome/WelcomeGreeting';
+import { welcomeSession } from './welcome/welcomeSession';
 import './styles/global.css';
 import './assets/branding/innovax/innovax-tokens.css';
 import './demo/DemoLaunch.css';
@@ -157,7 +159,7 @@ const playNotificationSound = (() => {
 })();
 
 const AppContent: React.FC = () => {
-  const { user, authenticated, logout } = useAuth();
+  const { user, session, authenticated, logout } = useAuth();
   const [section, setSection] = React.useState('dashboard');
   const [notifications, setNotifications] = React.useState<NotificacionUI[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
@@ -266,6 +268,7 @@ const AppContent: React.FC = () => {
   const handleLogout = () => {
     setDemoOpen(false);
     void logout();
+    welcomeSession.reset();
     setSection('dashboard');
   };
 
@@ -275,6 +278,13 @@ const AppContent: React.FC = () => {
   };
 
   const closeDemo = React.useCallback(() => setDemoOpen(false), []);
+
+  // Solo desde los controles de la demo: prueba de audio sin cerrar sesion.
+  const replayWelcome = React.useCallback(() => {
+    setDemoOpen(false);
+    setSection('dashboard');
+    welcomeSession.replay();
+  }, []);
 
   // Demo guiada: abre o cierra el centro de notificaciones. Solo lectura: no
   // marca nada como leido (eso ocurre unicamente al pulsar una notificacion).
@@ -290,6 +300,11 @@ const AppContent: React.FC = () => {
     return false;
   }), []);
 
+  // Cualquier salida de la sesion (cerrar sesion, expiracion) rearma la bienvenida.
+  React.useEffect(() => {
+    if (!authenticated) welcomeSession.reset();
+  }, [authenticated]);
+
   const firstCorrectionId = notifications.find(n => n.tipo === 'correccion')?.id;
 
   const notiTypeIcon = (tipo: string): import('./components/SgcIcon').SgcIconName => {
@@ -299,7 +314,7 @@ const AppContent: React.FC = () => {
   if (!authenticated) {
     return (
       <PublicOnlyRoute>
-        <Login onLoginSuccess={() => {}} />
+        <Login onLoginSuccess={() => welcomeSession.markLogin()} />
       </PublicOnlyRoute>
     );
   }
@@ -408,10 +423,16 @@ const AppContent: React.FC = () => {
           </div>
         </div>
         <ToastProvider />
+        <WelcomeGreeting
+          sessionKey={session?.sessionId || effectiveUser.id}
+          userName={effectiveUser.nombre}
+          role={effectiveUser.rol}
+          suppressed={demoOpen}
+        />
         {demoOpen && (
           <DemoErrorBoundary onReset={closeDemo}>
             <React.Suspense fallback={null}>
-              <GuidedDemo onNavigate={setSection} onClose={closeDemo} />
+              <GuidedDemo onNavigate={setSection} onClose={closeDemo} onReplayWelcome={replayWelcome} />
             </React.Suspense>
           </DemoErrorBoundary>
         )}

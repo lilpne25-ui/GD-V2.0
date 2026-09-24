@@ -23,7 +23,7 @@
   border: 1px solid rgba(214, 222, 235, 0.92);
   border-radius: 24px;
   background:
-    radial-gradient(circle at top left, rgba(23, 83, 212, 0.08), transparent 34%),
+    radial-gradient(circle at top left, var(--color-primary-glow), transparent 34%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 249, 252, 0.96) 100%);
   box-shadow: var(--shadow-sm);
 }
@@ -1989,3 +1989,29 @@
   }
 }
 
+
+/* Demo guiada: aviso de los dialogos de workflow abiertos como vista previa. */
+.wf-demo-preview-note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px dashed var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.wf-demo-preview-note strong {
+  letter-spacing: 0.04em;
+}
+
+/* Vista previa de la demo: el dialogo se alinea a la izquierda para que el
+   panel lateral de la demo (a la derecha) no tape ningun campo. */
+.doc-dialog-overlay--demo-preview {
+  justify-content: flex-start;
+  padding-left: 24px;
+}
+
+.doc-dialog-overlay--demo-preview .doc-dialog-card {
+  max-width: min(860px, calc(100vw - 500px));
+}

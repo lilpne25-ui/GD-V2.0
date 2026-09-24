@@ -1,0 +1,136 @@
+/*
+ * Bienvenida Innovax tras el login. Tarjeta integrada (no modal), colores solo
+ * desde innovax-tokens.css.
+ */
+
+.welcome-card {
+  position: fixed;
+  top: 72px;
+  right: 24px;
+  z-index: var(--z-toast);
+  width: min(440px, calc(100vw - 32px));
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--innovax-surface);
+  border: 1px solid var(--innovax-border);
+  box-shadow: var(--innovax-shadow-lg);
+  color: var(--innovax-text);
+  animation: welcome-in 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.welcome-card--leaving {
+  animation: welcome-out 0.42s ease both;
+}
+
+.welcome-accent {
+  display: block;
+  height: 4px;
+  background: var(--innovax-metal-gradient);
+}
+
+.welcome-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 18px 12px;
+}
+
+.welcome-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.welcome-title {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.welcome-subtitle {
+  font-size: 13.5px;
+  color: var(--innovax-muted);
+}
+
+.welcome-user {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--innovax-text);
+}
+
+.welcome-user em {
+  display: block;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--innovax-muted);
+}
+
+.welcome-close {
+  align-self: start;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--innovax-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--innovax-muted);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.welcome-close:hover {
+  color: var(--innovax-text);
+  background: var(--innovax-accent-soft);
+}
+
+.welcome-close:focus-visible {
+  outline: 2px solid var(--innovax-accent-text);
+  outline-offset: 2px;
+}
+
+.welcome-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px 14px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--innovax-muted);
+}
+
+.welcome-voice {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--innovax-border);
+}
+
+.welcome-voice.is-speaking {
+  background: var(--innovax-accent);
+  animation: welcome-voice 1.4s ease-out infinite;
+}
+
+@keyframes welcome-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes welcome-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes welcome-voice {
+  0% { box-shadow: 0 0 0 0 var(--innovax-accent-soft); }
+  100% { box-shadow: 0 0 0 7px transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-card,
+  .welcome-card--leaving,
+  .welcome-voice.is-speaking {
+    animation: none;
+  }
+}

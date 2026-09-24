@@ -15,7 +15,7 @@ export interface FakeVoiceOptions {
 }
 
 export const FAKE_VOICES: VoiceInfo[] = [
-  { name: 'Voz simulada (es-MX)', lang: 'es-MX', localService: true, default: true },
+  { name: 'Voz simulada femenina (es-MX)', lang: 'es-MX', localService: true, default: true },
 ];
 
 export class FakeVoiceEngine implements VoiceEngine {

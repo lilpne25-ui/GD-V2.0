@@ -44,6 +44,13 @@ type UseWorkflowParams = {
   refreshTree: (preferredFolderId?: string) => Promise<void>;
 };
 
+/**
+ * Demo guiada: los dialogos reales de aprobar / solicitar correcciones pueden
+ * abrirse como VISTA PREVIA con este identificador. Con el, aprobar y enviar
+ * correcciones no hacen nada (ni base de datos, ni notificaciones, ni correo).
+ */
+export const DEMO_PREVIEW_WORKFLOW_ID = '__demo_preview__';
+
 export const WF_STATUS_LABEL: Record<string, string> = {
   borrador: 'Borrador',
   revision: 'En Revisión',
@@ -249,6 +256,8 @@ export function useWorkflow({
 
   const approveWorkflow = async () => {
     if (!wfApproveDialog) return;
+    // Vista previa de la demo guiada: nunca aprueba.
+    if (wfApproveDialog.workflowId === DEMO_PREVIEW_WORKFLOW_ID) return;
     try {
       await (window as any).repo.call('WorkflowRepo', 'approve', wfApproveDialog.workflowId, {
         approvedBy: currentUserId,
@@ -307,6 +316,8 @@ export function useWorkflow({
 
   const requestCorrection = async () => {
     if (!wfCorrectionDialog) return;
+    // Vista previa de la demo guiada: nunca registra ni envia correcciones.
+    if (wfCorrectionDialog.workflowId === DEMO_PREVIEW_WORKFLOW_ID) return;
     if (!wfCorr.queEstaMal.trim() || !wfCorr.comoCorregir.trim()) {
       window.alert('Debes indicar qué está mal y cómo corregirlo.');
       return;

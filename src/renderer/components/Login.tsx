@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth, SessionUser } from '../context/AuthContext';
+import { InnovaxLogo } from '../demo/DemoBrand';
 
 type LoginProps = {
   onLoginSuccess: (user: SessionUser) => void;
@@ -52,8 +53,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <div className="auth-brand">
+          <InnovaxLogo size="lg" />
+        </div>
+        <p className="auth-kicker">Sistema de Gestión de Calidad</p>
         <h1 className="auth-title">Iniciar sesión</h1>
-        <p className="auth-subtitle">Sistema de Gestión de Calidad</p>
+        <p className="auth-subtitle">Accede con tu usuario para operar el sistema de Innovax.</p>
 
         <form className="auth-form" onSubmit={handleLogin}>
           <div className="form-group">
@@ -72,6 +77,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+        <p className="auth-powered">Powered by GD-V2 · Quality Operating System</p>
       </div>
     </div>
   );

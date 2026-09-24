@@ -2,6 +2,7 @@ import React from 'react';
 import SgcIcon from './SgcIcon';
 import type { SgcIconName } from './SgcIcon';
 import { isPrototypeSection } from './prototypeSections';
+import { InnovaxLogo } from '../demo/DemoBrand';
 import './Sidebar.css';
 
 type SidebarProps = {
@@ -44,11 +45,12 @@ const sections: SectionDefinition[] = [
 
 const Sidebar: React.FC<SidebarProps> = ({ active, onSelect }) => (
   <aside className="sidebar" aria-label="Navegación principal">
+    {/* Instancia Innovax sobre la plataforma GD-V2 (co-branding sobrio). */}
     <div className="sidebar-brand">
-      <span className="sidebar-brand-mark">SGC</span>
+      <InnovaxLogo size="md" />
       <div className="sidebar-brand-copy">
-        <span className="sidebar-logo">Sistema de Calidad</span>
-        <span className="sidebar-subtitle">Operación ISO 9001</span>
+        <span className="sidebar-logo">Sistema de Gestión de Calidad</span>
+        <span className="sidebar-subtitle">Powered by GD-V2</span>
       </div>
     </div>
 

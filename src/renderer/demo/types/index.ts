@@ -11,12 +11,14 @@ export type DemoStatus = 'context' | 'live' | 'next' | 'vision' | 'plan';
 /**
  * Origen del dato que se muestra en el paso. Nunca se mezclan:
  *  - REAL: datos o pantallas reales de GD-V2 / informacion de Innovax.
+ *  - REAL_UI_EXAMPLE: pantalla y funcion reales mostradas con un documento de
+ *    ejemplo (vista previa que no escribe), etiquetada "Ejemplo de flujo".
  *  - ANONYMIZED_REAL: derivado de datos reales, sin identificar personas.
  *  - DEMO_EXAMPLE: ejemplo creado para narrar, etiquetado como tal.
  *  - VISION: capacidad futura.
  *  - NO_DATA: capacidad implementada sin datos de demo en esta base.
  */
-export type DataSource = 'REAL' | 'ANONYMIZED_REAL' | 'DEMO_EXAMPLE' | 'VISION' | 'NO_DATA';
+export type DataSource = 'REAL' | 'REAL_UI_EXAMPLE' | 'ANONYMIZED_REAL' | 'DEMO_EXAMPLE' | 'VISION' | 'NO_DATA';
 
 /**
  * Acciones permitidas durante la demo. TODAS son de solo lectura o de
@@ -38,6 +40,8 @@ export type ReadOnlyActionKind =
   | 'doc.closeAccessDialog'
   | 'doc.openReviewInbox'
   | 'doc.closeReviewInbox'
+  | 'doc.openDecisionPreview'
+  | 'doc.closeDecisionPreview'
   | 'registros.setTab'
   | 'dynamic.selectType'
   | 'dynamic.resetForm'
@@ -68,7 +72,12 @@ export type StepVisual =
   | 'closed-loop'
   | 'closed-loop-value'
   | 'roadmap'
-  | 'roadmap-close';
+  | 'roadmap-close'
+  | 'workflow-branch'
+  | 'workflow-email';
+
+/** Parte del ciclo de revision que resalta el visual del workflow. */
+export type WorkflowFocus = 'overview' | 'approve' | 'correct' | 'resubmit';
 
 /** Origen del valor de un campo del formulario (escena FP-05-C). */
 export type FieldOrigin = 'user' | 'system';
@@ -94,6 +103,8 @@ export interface MicroStep {
   status: DemoStatus;
   dataSource: DataSource;
   visual?: StepVisual;
+  /** Solo visual 'workflow-branch': que parte del ciclo se resalta. */
+  workflowFocus?: WorkflowFocus;
   /** Solo escena FP-05-C: quien aporta el valor del campo iluminado. */
   fieldOrigin?: FieldOrigin;
   /** Mensaje si el objetivo no existe en este entorno (p. ej. bandeja vacia). */

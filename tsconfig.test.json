@@ -13,6 +13,7 @@
     "src/main/ipc/authMiddleware.ts",
     "src/database/db-sqlserver.ts",
     "src/database/repositories/credencialRepo.ts",
+    "src/database/repositories/correoRepo.ts",
     "src/renderer/demo/types/index.ts",
     "src/renderer/demo/actions/policy.ts",
     "src/renderer/demo/demoBus.ts",
@@ -24,6 +25,11 @@
     "src/renderer/demo/narration/VoiceEngine.ts",
     "src/renderer/demo/narration/VoiceController.ts",
     "src/renderer/demo/narration/FakeVoiceEngine.ts",
+    "src/renderer/demo/narration/voiceGender.ts",
+    "src/renderer/demo/narration/speechKey.ts",
+    "src/renderer/demo/narration/AudioAssetVoiceEngine.ts",
+    "src/renderer/welcome/greeting.ts",
+    "src/renderer/welcome/welcomeSession.ts",
     "src/shared/**/*.ts"
   ]
 }

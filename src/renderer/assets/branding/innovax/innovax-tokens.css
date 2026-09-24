@@ -9,7 +9,10 @@
  * Regla: ningun componente debe escribir estos HEX directamente. Usar siempre
  * las variables semanticas de la segunda seccion.
  *
- * Alcance: solo se cargan con la Demo guiada. No alteran el tema de GD-V2.
+ * Alcance: se cargan con la aplicacion (App.tsx, despues de global.css). La
+ * segunda :root ("Tema de la instancia") configura GD-V2 para Innovax: solo
+ * redefine identidad (acciones primarias, barra lateral, acentos). Los colores
+ * semanticos de GD-V2 (exito, aviso, error, informativo) NO se tocan.
  */
 
 :root {
@@ -45,4 +48,40 @@
     var(--innovax-oro-luminoso) 0%,
     var(--innovax-oro-medio) 100%
   );
+}
+
+/* ========================================================================
+ * Tema de la instancia Innovax sobre GD-V2.
+ * Todo deriva de la carta cromatica: sin tonos nuevos (solo opacidades).
+ * Selector html:root (mas especifico que :root) para que el tema de la
+ * instancia gane a global.css sin depender del orden de carga de las hojas.
+ * ======================================================================== */
+html:root {
+  /* Texto y superficies sobre fondo oscuro (chocolate). */
+  --innovax-on-dark: var(--innovax-marfil);
+  --innovax-on-dark-muted: rgba(253, 251, 248, 0.66);
+  --innovax-on-dark-subtle: rgba(253, 251, 248, 0.10);
+  --innovax-on-dark-border: rgba(253, 251, 248, 0.12);
+  --innovax-accent-glow: rgba(253, 208, 0, 0.10);
+
+  /* Acciones primarias de la plataforma con la identidad de la instancia. */
+  --color-primary: var(--innovax-chocolate);
+  --color-primary-hover: var(--innovax-bronce);
+  --color-primary-light: rgba(253, 208, 0, 0.16);
+  --color-ring: rgba(123, 65, 20, 0.26);
+  --color-primary-glow: rgba(253, 208, 0, 0.10);
+  --color-primary-border-soft: rgba(123, 65, 20, 0.28);
+  --btn-primary-bg: var(--innovax-chocolate);
+  --btn-primary-bg-hover: linear-gradient(180deg, var(--innovax-bronce) 0%, var(--innovax-chocolate) 100%);
+  --btn-primary-border: var(--innovax-chocolate);
+  --btn-primary-border-hover: var(--innovax-chocolate);
+  --btn-primary-shadow-hover: 0 12px 22px rgba(31, 19, 15, 0.24);
+  --avatar-bg: var(--innovax-chocolate);
+
+  /* Barra lateral: chocolate con un brillo muy sutil del acento. */
+  --innovax-sidebar-bg:
+    radial-gradient(circle at top left, var(--innovax-accent-glow), transparent 30%),
+    var(--innovax-chocolate);
+  --innovax-sidebar-active-bg: rgba(253, 208, 0, 0.14);
+  --innovax-sidebar-active-border: rgba(253, 208, 0, 0.42);
 }

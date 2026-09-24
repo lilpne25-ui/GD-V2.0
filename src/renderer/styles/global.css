@@ -28,6 +28,19 @@
   --color-sidebar-text: #ced7e5;
   --color-sidebar-active: #1a4dd8;
   --color-ring: rgba(23, 83, 212, 0.22);
+  /* Informativo semantico (estados "en revision", "siguiente implementacion").
+     No lo sustituye la marca de la instancia. */
+  --color-info: #1753d4;
+  --color-info-light: #e9f1ff;
+  /* Acciones primarias y acentos de la plataforma (la instancia puede redefinirlos). */
+  --color-primary-glow: rgba(23, 83, 212, 0.12);
+  --color-primary-border-soft: rgba(23, 83, 212, 0.26);
+  --btn-primary-bg: linear-gradient(180deg, #2563eb 0%, #1753d4 100%);
+  --btn-primary-bg-hover: linear-gradient(180deg, #1753d4 0%, #123fa5 100%);
+  --btn-primary-border: #1753d4;
+  --btn-primary-border-hover: #123fa5;
+  --btn-primary-shadow-hover: 0 14px 24px rgba(23, 83, 212, 0.22);
+  --avatar-bg: linear-gradient(135deg, #1753d4 0%, #0f8dcf 100%);
   --font-sans: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -69,7 +82,7 @@ body {
   font-size: 14px;
   color: var(--color-text);
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 26%),
+    radial-gradient(circle at top left, var(--color-primary-glow), transparent 26%),
     radial-gradient(circle at 85% 8%, rgba(14, 139, 99, 0.09), transparent 24%),
     linear-gradient(180deg, #f4f7fb 0%, #edf2f8 100%);
   -webkit-font-smoothing: antialiased;
@@ -88,7 +101,7 @@ button {
 }
 
 ::selection {
-  background: rgba(23, 83, 212, 0.14);
+  background: var(--color-ring);
 }
 
 :focus-visible {
@@ -210,7 +223,7 @@ button {
   font-size: 11px;
   font-weight: 800;
   color: #ffffff;
-  background: linear-gradient(135deg, #1753d4 0%, #0f8dcf 100%);
+  background: var(--avatar-bg);
 }
 
 .app-user-meta {
@@ -272,7 +285,7 @@ button {
 .noti-bell-btn:hover {
   transform: translateY(-1px);
   background: var(--color-hover);
-  border-color: rgba(23, 83, 212, 0.26);
+  border-color: var(--color-primary-border-soft);
 }
 
 .noti-bell-icon {
@@ -506,6 +519,33 @@ button {
   backdrop-filter: blur(18px);
 }
 
+.auth-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+/* Logo de la instancia en el login: tamano contenido para no dominar la tarjeta. */
+.auth-brand .gd-logo-card--lg {
+  height: 78px;
+}
+
+.auth-kicker {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--innovax-accent-text, var(--color-text-secondary));
+}
+
+.auth-powered {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
 .auth-title {
   font-size: 28px;
   font-weight: 800;
@@ -565,14 +605,14 @@ button {
   transform: translateY(-1px);
 }
 .btn-primary {
-  background: linear-gradient(180deg, #2563eb 0%, #1753d4 100%);
-  border-color: #1753d4;
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-border);
   color: #fff;
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #1753d4 0%, #123fa5 100%);
-  border-color: #123fa5;
-  box-shadow: 0 14px 24px rgba(23, 83, 212, 0.22);
+  background: var(--btn-primary-bg-hover);
+  border-color: var(--btn-primary-border-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
 }
 .btn-secondary {
   background: rgba(255, 255, 255, 0.9);
@@ -581,7 +621,7 @@ button {
 }
 .btn-secondary:hover:not(:disabled) {
   background: var(--color-hover);
-  border-color: rgba(23, 83, 212, 0.24);
+  border-color: var(--color-primary-border-soft);
   color: var(--color-text);
 }
 .btn:disabled {

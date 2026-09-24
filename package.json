@@ -49,6 +49,7 @@
     "migrate:passwords": "npm run build:test && node scripts/migrate-legacy-passwords.js",
     "bootstrap:admin": "npm run build:test && node scripts/bootstrap-admin.js",
     "demo:preflight": "npm run build:test && node scripts/demo-preflight.js",
+    "demo:email-test": "npm run build:test && node scripts/demo-email-test.js",
     "smoke:rag": "node scripts/rag-smoke-mssql.js",
     "build": "webpack --config webpack.renderer.js --mode production && webpack --config webpack.main.js --mode production && electron-builder"
   },

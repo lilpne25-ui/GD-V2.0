@@ -56,6 +56,14 @@ module.exports = (_env, argv = {}) => {
           include: path.resolve(__dirname, 'src/renderer/assets'),
           type: 'asset/inline',
         },
+        {
+          // Narracion pregenerada de la Demo guiada: archivos locales (sin
+          // internet durante la presentacion). Se emiten junto al bundle.
+          test: /\.(mp3|ogg|wav)$/i,
+          include: path.resolve(__dirname, 'src/renderer/assets/demo-audio'),
+          type: 'asset/resource',
+          generator: { filename: 'demo-audio/[name][ext]' },
+        },
       ],
     },
     optimization: {

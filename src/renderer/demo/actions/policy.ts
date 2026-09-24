@@ -25,6 +25,8 @@ export const READ_ONLY_ACTIONS: readonly ReadOnlyActionKind[] = [
   'doc.closeAccessDialog',
   'doc.openReviewInbox',
   'doc.closeReviewInbox',
+  'doc.openDecisionPreview',
+  'doc.closeDecisionPreview',
   'registros.setTab',
   'dynamic.selectType',
   'dynamic.resetForm',

@@ -113,7 +113,7 @@ test('el recorrido tiene 15 escenas con el estado acordado', () => {
 
 test('cada micro-paso declara id, titulo, narracion, estado y origen validos', () => {
   const statuses = Object.keys(STATUS_META);
-  const sources = ['REAL', 'ANONYMIZED_REAL', 'DEMO_EXAMPLE', 'VISION', 'NO_DATA'];
+  const sources = ['REAL', 'REAL_UI_EXAMPLE', 'ANONYMIZED_REAL', 'DEMO_EXAMPLE', 'VISION', 'NO_DATA'];
   const ids = new Set();
   for (const { step } of allSteps()) {
     assert.match(step.id, /^[a-z0-9]+(-[a-z0-9]+)*$/, `${step.id}: id no es kebab-case`);
@@ -487,7 +487,7 @@ test('la paleta coincide con la guia cromatica y vive en un unico archivo', () =
 });
 
 test('el logo nunca se recolorea ni se filtra en los estilos de la demo', () => {
-  const css = fs.readFileSync(path.join(DEMO_DIR, 'GuidedDemo.css'), 'utf8');
+  const css = read('src/renderer/assets/branding/innovax/innovax-brand.css');
   const logoRules = [...css.matchAll(/\.gd-logo-img\s*\{([^}]*)\}/g)].map(m => m[1]).join('\n');
   assert.ok(logoRules.includes('object-fit: contain'), 'el logo debe conservar su proporcion');
   assert.ok(!/filter|mix-blend|opacity|hue|saturate/i.test(logoRules), 'el logo no debe alterarse');

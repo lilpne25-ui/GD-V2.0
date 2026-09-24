@@ -3,6 +3,7 @@ import type { MicroStep } from './types';
 import type { DemoData } from './data/useDemoData';
 import { DemoBrand, SourceTag, StageTag } from './DemoBrand';
 import { FP15_EXAMPLE, fp15Duration } from './data/demoData';
+import { WF_STATUS_LABEL } from '../modules/documentacion/hooks/useWorkflow';
 
 // Visuales del panel de la demo.
 //
@@ -119,6 +120,94 @@ const MirrorVisual: React.FC = () => (
 );
 
 // ---------------------------------------------------------------------------
+// Escena 9 · Ciclo de revision (comportamiento real de useWorkflow/WorkflowRepo)
+// ---------------------------------------------------------------------------
+
+type WfFocus = 'overview' | 'approve' | 'correct' | 'resubmit';
+
+const APPROVE_EFFECTS = [
+  'Estado: ' + WF_STATUS_LABEL.aprobado,
+  'Queda quién aprobó y cuándo',
+  'Opcional: mover a la carpeta de aprobados',
+  'Aviso al autor: «Documento aprobado»',
+  'Correo, si el revisor marca la opción',
+];
+
+const CORRECT_EFFECTS = [
+  'Qué está mal · por qué · cómo corregir',
+  'Estado: ' + WF_STATUS_LABEL.correcciones,
+  'La observación queda en el historial',
+  'Aviso al autor: «Correcciones solicitadas»',
+  'Correo al autor con el detalle',
+];
+
+const WorkflowBranchVisual: React.FC<{ focus: WfFocus }> = ({ focus }) => {
+  const approveOn = focus === 'approve';
+  const correctOn = focus === 'correct' || focus === 'resubmit';
+  const dim = (on: boolean) => (focus !== 'overview' && !on ? ' is-dim' : '');
+  return (
+    <div className="gd-wf" aria-label="Ciclo de revisión de documentos">
+      <ol className="gd-wf-main">
+        <li><span className="gd-wf-state">{WF_STATUS_LABEL.borrador}</span></li>
+        <li aria-hidden="true" className="gd-wf-arrow">→</li>
+        <li><span className="gd-wf-state gd-wf-state--review">{WF_STATUS_LABEL.revision}</span></li>
+        <li aria-hidden="true" className="gd-wf-arrow">→</li>
+        <li><span className="gd-wf-state gd-wf-state--decision">Decisión</span></li>
+      </ol>
+      <div className="gd-wf-branches">
+        <section className={'gd-wf-branch gd-wf-branch--approve' + (approveOn ? ' is-on' : '') + dim(approveOn)}>
+          <header>✓ Aprobar</header>
+          {approveOn
+            ? <ul>{APPROVE_EFFECTS.map(e => <li key={e}>{e}</li>)}</ul>
+            : <p>{WF_STATUS_LABEL.aprobado} · vigente</p>}
+        </section>
+        <section className={'gd-wf-branch gd-wf-branch--correct' + (correctOn ? ' is-on' : '') + dim(correctOn)}>
+          <header>↩ Solicitar correcciones</header>
+          {focus === 'correct'
+            ? <ul>{CORRECT_EFFECTS.map(e => <li key={e}>{e}</li>)}</ul>
+            : <p>{WF_STATUS_LABEL.correcciones} · vuelve al autor</p>}
+          <div className={'gd-wf-loop' + (focus === 'resubmit' ? ' is-on' : '')}>
+            <span>Autor corrige</span>
+            <span aria-hidden="true">→</span>
+            <span>Reenvía</span>
+            <span aria-hidden="true">→</span>
+            <span>{WF_STATUS_LABEL.revision}</span>
+          </div>
+          {focus === 'resubmit' && (
+            <p className="gd-wf-note">Coordinación recibe un nuevo aviso: «Nuevo documento para revisión».</p>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+};
+
+/** Formato real del correo de correcciones (useWorkflow) con un documento de ejemplo. */
+const WorkflowEmailVisual: React.FC = () => (
+  <div className="gd-mail">
+    <div className="gd-live-head">
+      <SourceTag kind="flow-example" detail="formato real del correo" />
+    </div>
+    <div className="gd-mail-card">
+      <dl className="gd-mail-meta">
+        <div><dt>De</dt><dd>SGC Innovax · buzón del sistema</dd></div>
+        <div><dt>Para</dt><dd>Autor del documento (y destinatarios elegidos)</dd></div>
+        <div><dt>Asunto</dt><dd>[SGC] Correcciones requeridas: PR-XX (ejemplo)</dd></div>
+      </dl>
+      <div className="gd-mail-body">
+        <p><b>¿Qué está mal?:</b> la tabla de control de cambios no incluye la revisión actual.</p>
+        <p><b>¿Cómo corregir?:</b> agregar la revisión vigente y volver a enviar.</p>
+        <p className="gd-mail-by">Revisado por: Coordinación del SGC</p>
+      </div>
+    </div>
+    <p className="gd-wf-note">
+      Correcciones: se envía al autor. Aprobación: si el revisor marca la opción.
+      Requiere correo válido del usuario y el buzón SMTP configurado.
+    </p>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
 // Escena 11 · Campos del usuario vs campos del sistema
 // ---------------------------------------------------------------------------
 
@@ -228,9 +317,9 @@ const Fp15Visual: React.FC = () => {
     <div className="gd-fp15">
       <div className="gd-fp15-headline">
         <p>
-          Ese sigue siendo su FP-15.
+          Ese seguirá siendo su FP-15.
           <br />
-          <strong>Pero ahora produce información.</strong>
+          <strong>La diferencia: también producirá información.</strong>
         </p>
         <SourceTag kind="anonymized" detail="estructura real, datos anonimizados" />
       </div>
@@ -438,6 +527,8 @@ const DemoPreview: React.FC<PreviewProps> = ({ step, data, onNext }) => {
     case 'closed-loop-value': return <ClosedLoopValueVisual />;
     case 'roadmap': return <RoadmapVisual />;
     case 'roadmap-close': return <RoadmapCloseVisual />;
+    case 'workflow-branch': return <WorkflowBranchVisual focus={step.workflowFocus || 'overview'} />;
+    case 'workflow-email': return <WorkflowEmailVisual />;
     default: return null;
   }
 };

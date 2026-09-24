@@ -1,8 +1,12 @@
 // Motor de voz de la Demo guiada.
 //
-// Usa SOLO la sintesis de voz local del sistema (Web Speech API sobre las
-// voces instaladas en Windows). Sin internet, sin cuentas, sin claves y sin
-// proveedores externos: las voces remotas (localService === false) se ignoran.
+// Voz oficial de la demo Innovax (decision humana tras la audicion):
+//   Dalia Online (Natural) · Mexico, velocidad 1.05, pausa corta.
+// En la aplicacion Dalia llega como audio PREGENERADO (AudioAssetVoiceEngine):
+// Electron no expone las voces "Online (Natural)" de Edge. Este motor es la
+// reserva sobre speechSynthesis: si el navegador expone a Dalia la prefiere
+// explicitamente; si no, la mejor voz femenina local en espanol. Ninguna otra
+// voz remota (localService === false) se usa. Sin cuentas ni claves.
 //
 // Garantias:
 //  - Nunca lanza hacia la demo: cada fallo se traduce en un resultado 'error'
@@ -11,12 +15,17 @@
 //    un temporizador de avance: solo protege contra bloqueos.
 //  - cancel()/dispose() detienen la voz inmediatamente: no queda nada hablando
 //    al cerrar la demo.
+//  - La narradora es SIEMPRE una voz femenina en espanol (ver pickVoice).
+
+import { isFemaleVoice } from './voiceGender';
 
 export type VoiceEventType = 'STARTED' | 'PAUSED' | 'RESUMED' | 'FINISHED' | 'CANCELLED' | 'ERROR';
 
 export interface VoiceEvent {
   type: VoiceEventType;
   reason?: string;
+  /** Quien habla: la voz principal (Dalia) o la voz de respaldo. */
+  source?: 'primary' | 'fallback';
 }
 
 export interface VoiceInfo {
@@ -49,14 +58,23 @@ export interface VoiceEngine {
   dispose(): void;
 }
 
-// --- Tono -----------------------------------------------------------------------
-// Profesional y tranquilo: algo mas lento que el valor por defecto, sin alterar
-// el tono de la voz.
-export const VOICE_RATE = 0.95;
+// --- Tono (aprobado en la audicion: no cambiar salvo que Innovax lo pida) --------
+export const VOICE_RATE = 1.05;
 export const VOICE_PITCH = 1.0;
 export const VOICE_VOLUME = 1.0;
 
-// --- Seleccion de voz por capacidad (nunca por un nombre fijo) ----------------
+// --- Seleccion de voz -----------------------------------------------------------
+
+/**
+ * Voz principal aprobada. Se identifica por nombre o voiceURI ("... Dalia
+ * Online (Natural) - Spanish (Mexico)" en Edge) y por idioma es-MX.
+ */
+export const PRIMARY_VOICE_LABEL = 'Dalia Online (Natural) · México';
+
+export function isPrimaryVoice(voice: VoiceInfo & { voiceURI?: string }): boolean {
+  const id = `${voice.name} ${voice.voiceURI || ''}`;
+  return /\bdalia\b/i.test(id) && normLang(voice.lang) === 'es-mx';
+}
 
 function normLang(lang: string): string {
   return String(lang || '').replace('_', '-').toLowerCase();
@@ -67,24 +85,35 @@ function looksMexican(voice: VoiceInfo): boolean {
 }
 
 /**
- * Preferencia: es-MX > voz en espanol de Mexico/Latinoamerica > cualquier es-*
- * > voz predeterminada del sistema. Solo voces locales (sin internet).
+ * Narradora de la demo Innovax: SIEMPRE una voz femenina en espanol.
+ * Preferencia: Dalia (voz principal aprobada) > voz preferida por el presentador
+ * (si cumple) > femenina es-MX > espanol de Mexico/Latinoamerica > femenina es-*.
+ * Nunca una voz masculina, de genero desconocido u otra remota: sin candidata,
+ * null (modo manual con subtitulos).
  */
-export function pickVoice(voices: VoiceInfo[]): VoiceInfo | null {
-  const local = voices.filter(v => v.localService !== false);
-  if (local.length === 0) return null;
+export function pickVoice(voices: VoiceInfo[], preferredName?: string | null): VoiceInfo | null {
+  // 1. Dalia: la unica voz en linea admitida, porque fue aprobada explicitamente.
+  const primary = voices.filter(v => isPrimaryVoice(v));
+  if (primary.length) return primary.find(v => /natural/i.test(v.name)) || primary[0];
+
+  const candidates = voices.filter(v =>
+    v.localService !== false && normLang(v.lang).startsWith('es') && isFemaleVoice(v)
+  );
+  if (candidates.length === 0) return null;
+
+  if (preferredName) {
+    const wanted = preferredName.trim().toLowerCase();
+    const preferred = candidates.find(v => v.name.toLowerCase() === wanted)
+      || candidates.find(v => v.name.toLowerCase().includes(wanted));
+    if (preferred) return preferred;
+  }
 
   const byDefault = (list: VoiceInfo[]) => list.find(v => v.default) || list[0];
-
-  const esMx = local.filter(v => normLang(v.lang) === 'es-mx');
+  const esMx = candidates.filter(v => normLang(v.lang) === 'es-mx');
   if (esMx.length) return byDefault(esMx);
-
-  const spanish = local.filter(v => normLang(v.lang).startsWith('es'));
-  const latam = spanish.filter(looksMexican);
+  const latam = candidates.filter(looksMexican);
   if (latam.length) return byDefault(latam);
-  if (spanish.length) return byDefault(spanish);
-
-  return local.find(v => v.default) || null;
+  return byDefault(candidates);
 }
 
 /** Parte el texto en frases para locuciones cortas (mas estables y pausables). */
@@ -112,6 +141,9 @@ export function splitIntoChunks(text: string, maxLength = 220): string[] {
   }
   return chunks;
 }
+
+/** Respiracion entre frases: evita que todo suene con la misma cadencia continua. */
+export const CHUNK_GAP_MS = 250;
 
 /** Tiempo maximo razonable de una locucion antes de considerarla colgada. */
 export function watchdogMs(chunk: string, rate = VOICE_RATE): number {
@@ -159,6 +191,10 @@ export interface SpeechVoiceEngineOptions {
   volume?: number;
   /** Espera maxima a que Windows publique las voces (evento voiceschanged). */
   voicesTimeoutMs?: number;
+  /** Nombre de la voz femenina elegida tras la audicion (si existe en esta PC). */
+  preferredVoice?: string | null;
+  /** Pausa natural entre frases (ms). 0 = sin pausa. */
+  chunkGapMs?: number;
   log?: (message: string) => void;
 }
 
@@ -175,7 +211,8 @@ interface Run {
 export class SpeechVoiceEngine implements VoiceEngine {
   private readonly synth: SynthLike | null;
   private readonly makeUtterance: (text: string) => UtteranceLike;
-  private readonly opts: Required<Omit<SpeechVoiceEngineOptions, 'log'>> & { log: (m: string) => void };
+  private readonly opts: Required<Omit<SpeechVoiceEngineOptions, 'log' | 'preferredVoice'>>
+    & { log: (m: string) => void; preferredVoice: string | null };
   private readonly listeners = new Set<(event: VoiceEvent) => void>();
   private voices: SynthVoiceLike[] = [];
   private selected: SynthVoiceLike | null = null;
@@ -183,6 +220,8 @@ export class SpeechVoiceEngine implements VoiceEngine {
   private paused = false;
   private tokenSeq = 0;
   private current: UtteranceLike | null = null;
+  private gapTimer: ReturnType<typeof setTimeout> | null = null;
+  private chunkPendingAfterPause = false;
 
   constructor(
     synth: SynthLike | null,
@@ -195,7 +234,9 @@ export class SpeechVoiceEngine implements VoiceEngine {
       rate: options.rate ?? VOICE_RATE,
       pitch: options.pitch ?? VOICE_PITCH,
       volume: options.volume ?? VOICE_VOLUME,
-      voicesTimeoutMs: options.voicesTimeoutMs ?? 2000,
+      voicesTimeoutMs: options.voicesTimeoutMs ?? 5000,
+      chunkGapMs: options.chunkGapMs ?? CHUNK_GAP_MS,
+      preferredVoice: options.preferredVoice ?? null,
       log: options.log ?? (() => undefined),
     };
   }
@@ -207,7 +248,7 @@ export class SpeechVoiceEngine implements VoiceEngine {
       this.voices = synth.getVoices() || [];
       if (this.voices.length === 0) this.voices = await this.waitForVoices(synth);
       const picked = this.selectVoice();
-      if (!picked) return { available: false, voice: null, reason: 'no hay voces locales disponibles' };
+      if (!picked) return { available: false, voice: null, reason: 'no hay una voz femenina local en espanol' };
       this.opts.log(`[GuidedDemo] Voz seleccionada: ${picked.name} (${picked.lang})`);
       return { available: true, voice: picked };
     } catch (error) {
@@ -220,7 +261,7 @@ export class SpeechVoiceEngine implements VoiceEngine {
   }
 
   selectVoice(voices: VoiceInfo[] = this.getAvailableVoices()): VoiceInfo | null {
-    const picked = pickVoice(voices);
+    const picked = pickVoice(voices, this.opts.preferredVoice);
     this.selected = picked ? this.voices.find(v => v.name === picked.name && v.lang === picked.lang) || null : null;
     return picked;
   }
@@ -253,6 +294,12 @@ export class SpeechVoiceEngine implements VoiceEngine {
     if (!this.run || this.paused) return;
     this.paused = true;
     this.clearWatchdog(this.run);
+    if (this.gapTimer) {
+      // En pausa durante la respiracion entre frases: la siguiente espera a Reanudar.
+      clearTimeout(this.gapTimer);
+      this.gapTimer = null;
+      this.chunkPendingAfterPause = true;
+    }
     try {
       this.synth?.pause();
     } catch {
@@ -264,6 +311,12 @@ export class SpeechVoiceEngine implements VoiceEngine {
   resume(): void {
     if (!this.run || !this.paused) return;
     this.paused = false;
+    if (this.chunkPendingAfterPause) {
+      this.chunkPendingAfterPause = false;
+      this.emit({ type: 'RESUMED' });
+      this.speakChunk(this.run);
+      return;
+    }
     try {
       this.synth?.resume();
     } catch {
@@ -277,6 +330,7 @@ export class SpeechVoiceEngine implements VoiceEngine {
     const run = this.run;
     this.run = null;
     this.paused = false;
+    this.clearGap();
     this.current = null;
     try {
       this.synth?.cancel();
@@ -315,17 +369,23 @@ export class SpeechVoiceEngine implements VoiceEngine {
   // --- Internos -----------------------------------------------------------------
 
   private waitForVoices(synth: SynthLike): Promise<SynthVoiceLike[]> {
+    // Medido en Electron al arrancar en frio: Chromium dispara un primer
+    // 'voiceschanged' con la lista VACIA (~27 ms) y otro con las voces reales
+    // (~35 ms). Se ignoran los avisos vacios: solo cuenta una lista con voces.
     return new Promise(resolve => {
       let done = false;
       const finish = () => {
         if (done) return;
         done = true;
         clearTimeout(timer);
-        synth.removeEventListener?.('voiceschanged', finish);
+        synth.removeEventListener?.('voiceschanged', onChange);
         resolve(synth.getVoices() || []);
       };
+      const onChange = () => {
+        if ((synth.getVoices() || []).length > 0) finish();
+      };
       const timer = setTimeout(finish, this.opts.voicesTimeoutMs);
-      synth.addEventListener?.('voiceschanged', finish);
+      synth.addEventListener?.('voiceschanged', onChange);
     });
   }
 
@@ -349,7 +409,7 @@ export class SpeechVoiceEngine implements VoiceEngine {
       this.clearWatchdog(run);
       run.index += 1;
       if (run.index < run.chunks.length) {
-        this.speakChunk(run);
+        this.nextChunkAfterGap(run);
         return;
       }
       this.finish(run, 'finished');
@@ -371,9 +431,33 @@ export class SpeechVoiceEngine implements VoiceEngine {
     }
   }
 
+  private nextChunkAfterGap(run: Run): void {
+    const gap = this.opts.chunkGapMs;
+    if (gap <= 0) {
+      this.speakChunk(run);
+      return;
+    }
+    this.gapTimer = setTimeout(() => {
+      this.gapTimer = null;
+      if (this.run !== run) return;
+      if (this.paused) {
+        this.chunkPendingAfterPause = true;
+        return;
+      }
+      this.speakChunk(run);
+    }, gap);
+  }
+
+  private clearGap(): void {
+    if (this.gapTimer) clearTimeout(this.gapTimer);
+    this.gapTimer = null;
+    this.chunkPendingAfterPause = false;
+  }
+
   private finish(run: Run, outcome: SpeakOutcome, reason?: string): void {
     if (this.run !== run) return;
     this.clearWatchdog(run);
+    this.clearGap();
     this.run = null;
     this.paused = false;
     this.current = null;
